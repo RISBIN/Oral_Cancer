@@ -5,8 +5,12 @@ from django.http import JsonResponse
 from django.views.decorators.http import require_http_methods
 from .models import Image, DetectionResult
 from config.supabase import SupabaseStorage
+from ml_models import predict_with_both_models
 import uuid
 from datetime import datetime
+import logging
+
+logger = logging.getLogger(__name__)
 
 @login_required
 def upload(request):
@@ -79,37 +83,65 @@ def results(request, id):
     """Detection results view"""
     image = get_object_or_404(Image, id=id, user=request.user)
 
-    # Generate demo results if requested
-    if request.method == 'POST' and request.POST.get('generate_demo'):
-        import random
+    # Run ML inference if requested
+    if request.method == 'POST' and request.POST.get('run_detection'):
+        print(f"[DEBUG] POST request received with run_detection")
+        print(f"[DEBUG] POST data: {request.POST}")
+        try:
+            # Get image path
+            image_path = image.file.path if image.file else None
+            print(f"[DEBUG] Image path: {image_path}")
 
-        # Generate RegNetY320 result
-        regnet_confidence = random.uniform(0.85, 0.95)
-        regnet_prediction = 'Cancer' if regnet_confidence > 0.88 else 'Non-Cancer'
-        DetectionResult.objects.create(
-            image=image,
-            user=request.user,
-            model_name='RegNetY320',
-            prediction=regnet_prediction,
-            confidence_score=regnet_confidence,
-            processing_time=random.uniform(8.0, 12.0),
-            model_version='v1.0'
-        )
+            if not image_path:
+                messages.error(request, 'Image file not found. Please re-upload the image.')
+                return redirect('detection:results', id=id)
 
-        # Generate VGG16 result
-        vgg16_confidence = random.uniform(0.70, 0.80)
-        vgg16_prediction = 'Cancer' if vgg16_confidence > 0.75 else 'Non-Cancer'
-        DetectionResult.objects.create(
-            image=image,
-            user=request.user,
-            model_name='VGG16',
-            prediction=vgg16_prediction,
-            confidence_score=vgg16_confidence,
-            processing_time=random.uniform(15.0, 20.0),
-            model_version='v1.0'
-        )
+            # Run prediction with both models
+            print(f"[INFO] Running ML inference on image: {image_path}")
+            logger.info(f"Running ML inference on image: {image_path}")
+            predictions = predict_with_both_models(image_path)
+            print(f"[DEBUG] Predictions: {predictions}")
 
-        messages.success(request, 'Demo detection results generated successfully!')
+            # Save RegNetY320 results
+            if predictions.get('regnet'):
+                regnet_result = predictions['regnet']
+                DetectionResult.objects.create(
+                    image=image,
+                    user=request.user,
+                    model_name='RegNetY320',
+                    prediction=regnet_result['prediction'],
+                    confidence_score=regnet_result['confidence'],
+                    processing_time=regnet_result['processing_time'],
+                    model_version='v1.0'
+                )
+                logger.info(f"RegNet prediction: {regnet_result['prediction']} ({regnet_result['confidence']:.2%})")
+
+            # Save VGG16 results
+            if predictions.get('vgg16'):
+                vgg16_result = predictions['vgg16']
+                DetectionResult.objects.create(
+                    image=image,
+                    user=request.user,
+                    model_name='VGG16',
+                    prediction=vgg16_result['prediction'],
+                    confidence_score=vgg16_result['confidence'],
+                    processing_time=vgg16_result['processing_time'],
+                    model_version='v1.0'
+                )
+                logger.info(f"VGG16 prediction: {vgg16_result['prediction']} ({vgg16_result['confidence']:.2%})")
+
+            # Update image status
+            image.status = 'processed'
+            image.save()
+
+            messages.success(request, 'Detection completed successfully!')
+
+        except Exception as e:
+            logger.error(f"Error during ML inference: {e}")
+            messages.error(request, f'Error during detection: {str(e)}')
+            image.status = 'failed'
+            image.save()
+
         return redirect('detection:results', id=id)
 
     # Get detection results for this image
