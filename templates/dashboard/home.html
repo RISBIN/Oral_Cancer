@@ -1,0 +1,194 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Dashboard - OralCare AI{% endblock %}
+
+{% block content %}
+<div class="bg-light min-vh-100 py-4">
+    <div class="container-fluid px-4">
+        <!-- Page Header -->
+        <div class="row mb-4">
+            <div class="col">
+                <h2 class="fw-bold mb-1">Dashboard</h2>
+                <p class="text-muted">Welcome back, {{ user.get_full_name }}!</p>
+            </div>
+            <div class="col-auto">
+                <a href="{% url 'detection:upload' %}" class="btn btn-primary">
+                    <i class="fas fa-upload me-2"></i>Upload Image
+                </a>
+            </div>
+        </div>
+
+        <!-- Stats Cards -->
+        <div class="row g-4 mb-4">
+            <div class="col-md-3">
+                <div class="stats-card">
+                    <div class="stats-icon primary">
+                        <i class="fas fa-images"></i>
+                    </div>
+                    <h3 class="fw-bold mb-0">{{ total_images }}</h3>
+                    <p class="text-muted mb-0">Total Scans</p>
+                </div>
+            </div>
+
+            <div class="col-md-3">
+                <div class="stats-card">
+                    <div class="stats-icon success">
+                        <i class="fas fa-check-circle"></i>
+                    </div>
+                    <h3 class="fw-bold mb-0">{{ processed_images }}</h3>
+                    <p class="text-muted mb-0">Processed</p>
+                </div>
+            </div>
+
+            <div class="col-md-3">
+                <div class="stats-card">
+                    <div class="stats-icon warning">
+                        <i class="fas fa-exclamation-triangle"></i>
+                    </div>
+                    <h3 class="fw-bold mb-0">{{ cancer_detections }}</h3>
+                    <p class="text-muted mb-0">Cancer Detected</p>
+                </div>
+            </div>
+
+            <div class="col-md-3">
+                <div class="stats-card">
+                    <div class="stats-icon danger">
+                        <i class="fas fa-file-pdf"></i>
+                    </div>
+                    <h3 class="fw-bold mb-0">{{ total_reports }}</h3>
+                    <p class="text-muted mb-0">Reports Generated</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Recent Scans & Quick Actions -->
+        <div class="row g-4">
+            <!-- Recent Scans -->
+            <div class="col-md-8">
+                <div class="card border-0 shadow-sm">
+                    <div class="card-header bg-white border-bottom">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <h5 class="fw-bold mb-0">Recent Scans</h5>
+                            <a href="{% url 'detection:history' %}" class="btn btn-sm btn-outline-primary">
+                                View All
+                            </a>
+                        </div>
+                    </div>
+                    <div class="card-body p-0">
+                        {% if recent_images %}
+                        <div class="table-responsive">
+                            <table class="table table-hover mb-0">
+                                <thead>
+                                    <tr>
+                                        <th>Image</th>
+                                        <th>Status</th>
+                                        <th>Date</th>
+                                        <th>Action</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for image in recent_images %}
+                                    <tr>
+                                        <td>
+                                            <div class="d-flex align-items-center">
+                                                <i class="fas fa-image text-primary me-2"></i>
+                                                {{ image.filename }}
+                                            </div>
+                                        </td>
+                                        <td>
+                                            {% if image.status == 'processed' %}
+                                            <span class="badge bg-success">Processed</span>
+                                            {% elif image.status == 'processing' %}
+                                            <span class="badge bg-warning">Processing</span>
+                                            {% elif image.status == 'pending' %}
+                                            <span class="badge bg-secondary">Pending</span>
+                                            {% else %}
+                                            <span class="badge bg-danger">Failed</span>
+                                            {% endif %}
+                                        </td>
+                                        <td>{{ image.upload_date|date:"M d, Y" }}</td>
+                                        <td>
+                                            {% if image.has_results %}
+                                            <a href="{% url 'detection:results' image.id %}" class="btn btn-sm btn-primary">
+                                                View Results
+                                            </a>
+                                            {% else %}
+                                            <button class="btn btn-sm btn-secondary" disabled>No Results</button>
+                                            {% endif %}
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                        {% else %}
+                        <div class="text-center py-5">
+                            <i class="fas fa-inbox text-muted mb-3" style="font-size: 3rem;"></i>
+                            <p class="text-muted">No scans yet. Upload your first image to get started!</p>
+                            <a href="{% url 'detection:upload' %}" class="btn btn-primary">
+                                <i class="fas fa-upload me-2"></i>Upload Image
+                            </a>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Quick Actions & Info -->
+            <div class="col-md-4">
+                <!-- Quick Actions -->
+                <div class="card border-0 shadow-sm mb-4">
+                    <div class="card-header bg-white border-bottom">
+                        <h5 class="fw-bold mb-0">Quick Actions</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="d-grid gap-2">
+                            <a href="{% url 'detection:upload' %}" class="btn btn-primary">
+                                <i class="fas fa-upload me-2"></i>Upload New Image
+                            </a>
+                            <a href="{% url 'detection:history' %}" class="btn btn-outline-primary">
+                                <i class="fas fa-history me-2"></i>View History
+                            </a>
+                            <a href="{% url 'accounts:profile' %}" class="btn btn-outline-primary">
+                                <i class="fas fa-user me-2"></i>My Profile
+                            </a>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Account Info -->
+                <div class="card border-0 shadow-sm">
+                    <div class="card-header bg-white border-bottom">
+                        <h5 class="fw-bold mb-0">Account Info</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="mb-3">
+                            <small class="text-muted">Name</small>
+                            <p class="mb-0 fw-medium">{{ user.get_full_name }}</p>
+                        </div>
+                        <div class="mb-3">
+                            <small class="text-muted">Email</small>
+                            <p class="mb-0 fw-medium">{{ user.email }}</p>
+                        </div>
+                        <div class="mb-3">
+                            <small class="text-muted">Role</small>
+                            <p class="mb-0 fw-medium text-capitalize">{{ user.role }}</p>
+                        </div>
+                        {% if user.institution %}
+                        <div class="mb-3">
+                            <small class="text-muted">Institution</small>
+                            <p class="mb-0 fw-medium">{{ user.institution }}</p>
+                        </div>
+                        {% endif %}
+                        <div>
+                            <small class="text-muted">Member Since</small>
+                            <p class="mb-0 fw-medium">{{ user.created_at|date:"M d, Y" }}</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

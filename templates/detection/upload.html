@@ -1,0 +1,239 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Upload Image - OralCare AI{% endblock %}
+
+{% block extra_css %}
+<style>
+    .upload-preview {
+        max-width: 100%;
+        max-height: 400px;
+        border-radius: 0.75rem;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="bg-light min-vh-100 py-4">
+    <div class="container">
+        <div class="row mb-4">
+            <div class="col">
+                <h2 class="fw-bold mb-1">Upload Medical Image</h2>
+                <p class="text-muted">Upload oral pathology images for AI-powered cancer detection</p>
+            </div>
+        </div>
+
+        <div class="row g-4">
+            <!-- Upload Section -->
+            <div class="col-md-8">
+                <div class="card border-0 shadow-sm">
+                    <div class="card-body p-4">
+                        <form method="post" enctype="multipart/form-data" id="uploadForm">
+                            {% csrf_token %}
+
+                            <!-- Drag & Drop Zone -->
+                            <div class="upload-zone" id="uploadZone">
+                                <input type="file" id="fileInput" name="image" accept="image/jpeg,image/jpg,image/png" hidden>
+                                <div class="text-center" id="uploadPrompt">
+                                    <div class="upload-icon">
+                                        <i class="fas fa-cloud-upload-alt"></i>
+                                    </div>
+                                    <h5 class="fw-bold mb-2">Drag & Drop your image here</h5>
+                                    <p class="text-muted mb-3">or</p>
+                                    <button type="button" class="btn btn-primary" onclick="document.getElementById('fileInput').click()">
+                                        <i class="fas fa-folder-open me-2"></i>Browse Files
+                                    </button>
+                                    <p class="text-muted small mt-3 mb-0">
+                                        Supported formats: JPG, JPEG, PNG (Max 10MB)
+                                    </p>
+                                </div>
+
+                                <!-- Preview -->
+                                <div id="previewSection" class="d-none">
+                                    <div class="text-center">
+                                        <img id="imagePreview" class="upload-preview mb-3" alt="Preview">
+                                        <div id="fileInfo" class="mb-3">
+                                            <p class="fw-medium mb-1" id="fileName"></p>
+                                            <p class="text-muted small mb-0" id="fileSize"></p>
+                                        </div>
+                                        <button type="button" class="btn btn-outline-danger me-2" onclick="clearUpload()">
+                                            <i class="fas fa-times me-2"></i>Clear
+                                        </button>
+                                        <button type="submit" class="btn btn-primary">
+                                            <i class="fas fa-upload me-2"></i>Upload & Process
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Progress Bar -->
+                            <div id="uploadProgress" class="mt-3 d-none">
+                                <div class="d-flex justify-content-between mb-2">
+                                    <span class="small fw-medium">Uploading...</span>
+                                    <span class="small fw-medium" id="progressText">0%</span>
+                                </div>
+                                <div class="progress">
+                                    <div class="progress-bar" role="progressbar" id="progressBar" style="width: 0%"></div>
+                                </div>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Instructions -->
+            <div class="col-md-4">
+                <div class="card border-0 shadow-sm mb-4">
+                    <div class="card-header bg-white border-bottom">
+                        <h5 class="fw-bold mb-0">
+                            <i class="fas fa-info-circle text-primary me-2"></i>Instructions
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <ol class="mb-0 ps-3">
+                            <li class="mb-2">Upload a clear oral pathology image</li>
+                            <li class="mb-2">Ensure good lighting and focus</li>
+                            <li class="mb-2">Supported formats: JPG, PNG</li>
+                            <li class="mb-2">Maximum file size: 10MB</li>
+                            <li>Wait for AI processing (~10 seconds)</li>
+                        </ol>
+                    </div>
+                </div>
+
+                <div class="card border-0 shadow-sm">
+                    <div class="card-header bg-white border-bottom">
+                        <h5 class="fw-bold mb-0">
+                            <i class="fas fa-chart-bar text-primary me-2"></i>Model Info
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="mb-3">
+                            <h6 class="fw-bold mb-1">RegNetY320</h6>
+                            <p class="text-muted small mb-0">Accuracy: 89.4%</p>
+                        </div>
+                        <div>
+                            <h6 class="fw-bold mb-1">VGG16</h6>
+                            <p class="text-muted small mb-0">Accuracy: 73.7%</p>
+                        </div>
+                        <hr class="my-3">
+                        <p class="text-muted small mb-0">
+                            <i class="fas fa-shield-alt text-success me-1"></i>
+                            Your images are securely stored
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const uploadZone = document.getElementById('uploadZone');
+    const fileInput = document.getElementById('fileInput');
+    const uploadPrompt = document.getElementById('uploadPrompt');
+    const previewSection = document.getElementById('previewSection');
+    const imagePreview = document.getElementById('imagePreview');
+    const fileName = document.getElementById('fileName');
+    const fileSize = document.getElementById('fileSize');
+    const uploadForm = document.getElementById('uploadForm');
+    const uploadProgress = document.getElementById('uploadProgress');
+    const progressBar = document.getElementById('progressBar');
+    const progressText = document.getElementById('progressText');
+
+    // Drag & Drop
+    uploadZone.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        uploadZone.classList.add('dragover');
+    });
+
+    uploadZone.addEventListener('dragleave', () => {
+        uploadZone.classList.remove('dragover');
+    });
+
+    uploadZone.addEventListener('drop', (e) => {
+        e.preventDefault();
+        uploadZone.classList.remove('dragover');
+        const files = e.dataTransfer.files;
+        if (files.length > 0) {
+            handleFile(files[0]);
+        }
+    });
+
+    fileInput.addEventListener('change', (e) => {
+        if (e.target.files.length > 0) {
+            handleFile(e.target.files[0]);
+        }
+    });
+
+    function handleFile(file) {
+        // Validate file
+        if (!window.OralCareAI.validateImageFile(file)) {
+            return;
+        }
+
+        // Show preview
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            imagePreview.src = e.target.result;
+            fileName.textContent = file.name;
+            fileSize.textContent = window.OralCareAI.formatFileSize(file.size);
+            uploadPrompt.classList.add('d-none');
+            previewSection.classList.remove('d-none');
+        };
+        reader.readAsDataURL(file);
+    }
+
+    // Form submit
+    uploadForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+
+        const formData = new FormData(uploadForm);
+
+        // Show progress
+        uploadProgress.classList.remove('d-none');
+
+        try {
+            const xhr = new XMLHttpRequest();
+
+            xhr.upload.addEventListener('progress', (e) => {
+                if (e.lengthComputable) {
+                    const percent = Math.round((e.loaded / e.total) * 100);
+                    progressBar.style.width = percent + '%';
+                    progressText.textContent = percent + '%';
+                }
+            });
+
+            xhr.addEventListener('load', () => {
+                if (xhr.status === 200) {
+                    const response = JSON.parse(xhr.responseText);
+                    window.OralCareAI.showToast('Image uploaded successfully!', 'success');
+                    setTimeout(() => {
+                        window.location.href = response.redirect_url;
+                    }, 1000);
+                } else {
+                    window.OralCareAI.showToast('Upload failed. Please try again.', 'danger');
+                    uploadProgress.classList.add('d-none');
+                }
+            });
+
+            xhr.open('POST', uploadForm.action);
+            xhr.setRequestHeader('X-CSRFToken', '{{ csrf_token }}');
+            xhr.send(formData);
+
+        } catch (error) {
+            window.OralCareAI.showToast('Upload failed. Please try again.', 'danger');
+            uploadProgress.classList.add('d-none');
+        }
+    });
+});
+
+function clearUpload() {
+    document.getElementById('fileInput').value = '';
+    document.getElementById('uploadPrompt').classList.remove('d-none');
+    document.getElementById('previewSection').classList.add('d-none');
+}
+</script>
+{% endblock %}
