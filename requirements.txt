@@ -1,5 +1,5 @@
 # Core Django
-Django==5.0.1
+Django==4.2.11
 django-environ==0.11.2
 python-decouple==3.8
 
@@ -11,10 +11,11 @@ dj-database-url==2.1.0
 supabase==2.3.4
 postgrest==0.13.2
 
-# Machine Learning
-tensorflow==2.19.1
-keras==3.7.0
-numpy>=1.26.0
+# Machine Learning - PyTorch
+torch==2.1.0
+torchvision==0.16.0
+timm==1.0.20
+numpy==1.24.3
 Pillow==10.2.0
 opencv-python==4.9.0.80
 scikit-learn==1.4.0
@@ -28,10 +29,10 @@ weasyprint==60.2
 
 # Forms & Validation
 django-crispy-forms==2.1
-crispy-bootstrap5==2.0.0
+crispy-bootstrap5==0.7
 
 # Authentication
-django-allauth==0.61.1
+# django-allauth==0.63.3  # Removed - not used in project
 PyJWT==2.8.0
 
 # API & Serialization

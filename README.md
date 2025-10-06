@@ -143,37 +143,33 @@ Visit http://localhost:8000
 
 ### Download Pre-trained Models
 
-Place your trained models in `ml_models/` directory:
-- `ml_models/regnet_y320.h5`
-- `ml_models/vgg16.h5`
+**Download from Kaggle Dataset:**
+
+1. Visit: https://www.kaggle.com/datasets/shibinbj/oral-cancer-pretrained-models
+2. Download the dataset (contains `regnet_y320_best.pth` and `vgg16_best.pth`)
+3. Extract and move the `.pth` files to `ml_models/` directory:
+
+```bash
+# After downloading from Kaggle
+ml_models/
+├── regnet_y320_best.pth  (547 MB)
+├── vgg16_best.pth         (464 MB)
+└── README.md
+```
 
 ### Training Your Own Models (Optional)
 
-```python
-# Example training script
-from tensorflow.keras.applications import RegNetY320, VGG16
-from tensorflow.keras.layers import Dense, GlobalAveragePooling2D
-from tensorflow.keras.models import Model
+Use the provided Jupyter notebook `oral_cancer_detection_kaggle.ipynb`:
 
-# Load base model
-base_model = RegNetY320(weights='imagenet', include_top=False)
+1. Prepare your oral cancer dataset (cancer and normal images)
+2. Update dataset paths in the notebook
+3. Run all cells to train RegNetY320 and VGG16 models
+4. Models will be saved as `.pth` files automatically
 
-# Add custom layers
-x = base_model.output
-x = GlobalAveragePooling2D()(x)
-x = Dense(128, activation='relu')(x)
-predictions = Dense(1, activation='sigmoid')(x)
-
-# Create model
-model = Model(inputs=base_model.input, outputs=predictions)
-
-# Compile and train
-model.compile(optimizer='adam', loss='binary_crossentropy', metrics=['accuracy'])
-model.fit(X_train, y_train, epochs=50, validation_data=(X_val, y_val))
-
-# Save model
-model.save('ml_models/regnet_y320.h5')
-```
+**Model Details:**
+- RegNetY320: 89.4% accuracy (timm library)
+- VGG16: 73.7% accuracy (torchvision)
+- Binary classification: Cancer vs Normal
 
 ## Usage
 

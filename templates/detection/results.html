@@ -146,15 +146,16 @@
                         <div class="card-body text-center py-5">
                             <i class="fas fa-robot text-muted mb-3" style="font-size: 4rem;"></i>
                             <h5 class="fw-bold mb-2">No Results Yet</h5>
-                            <p class="text-muted mb-4">This image hasn't been processed yet. AI processing will be available soon!</p>
+                            <p class="text-muted mb-4">Click the button below to run AI detection with RegNetY320 and VGG16 models.</p>
 
-                            <!-- Demo Data Button -->
+                            <!-- Run Detection Button -->
                             <form method="post" action="{% url 'detection:results' image.id %}">
                                 {% csrf_token %}
-                                <button type="submit" name="generate_demo" class="btn btn-primary">
-                                    <i class="fas fa-magic me-2"></i>Generate Demo Results
+                                <button type="submit" name="run_detection" value="1" class="btn btn-primary btn-lg">
+                                    <i class="fas fa-brain me-2"></i>Run AI Detection
                                 </button>
                             </form>
+                            <small class="text-muted d-block mt-3">This will use trained PyTorch models to analyze the image</small>
                         </div>
                     </div>
                 {% endif %}
