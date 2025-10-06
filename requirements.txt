@@ -12,9 +12,9 @@ supabase==2.3.4
 postgrest==0.13.2
 
 # Machine Learning
-tensorflow==2.15.0
-keras==2.15.0
-numpy==1.24.3
+tensorflow==2.19.1
+keras==3.7.0
+numpy>=1.26.0
 Pillow==10.2.0
 opencv-python==4.9.0.80
 scikit-learn==1.4.0
