@@ -4,163 +4,517 @@
 {% block title %}Detection Results - OralCare AI{% endblock %}
 
 {% block content %}
-<div class="bg-light min-vh-100 py-4">
-    <div class="container">
-        <div class="row mb-4">
-            <div class="col">
-                <a href="{% url 'detection:history' %}" class="text-decoration-none text-muted mb-2 d-inline-block">
-                    <i class="fas fa-arrow-left me-2"></i>Back to History
-                </a>
-                <h2 class="fw-bold mb-1">Detection Results</h2>
-                <p class="text-muted">{{ image.filename }}</p>
+<style>
+    body {
+        background: #f8f9fa;
+        font-family: 'Inter', 'Segoe UI', system-ui, -apple-system, sans-serif;
+    }
+
+    .results-wrapper {
+        background: #ffffff;
+        min-height: 100vh;
+    }
+
+    .top-bar {
+        background: #ffffff;
+        border-bottom: 1px solid #e9ecef;
+        padding: 20px 0;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.04);
+    }
+
+    .medical-card {
+        background: #ffffff;
+        border-radius: 12px;
+        border: 1px solid #e9ecef;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+        margin-bottom: 20px;
+        overflow: hidden;
+    }
+
+    .card-header-custom {
+        background: #ffffff;
+        border-bottom: 2px solid #4A90E2;
+        padding: 20px 25px;
+    }
+
+    .card-title {
+        color: #2C3E50;
+        font-size: 1.1rem;
+        font-weight: 600;
+        margin: 0;
+    }
+
+    .image-container {
+        background: #f8f9fa;
+        padding: 30px;
+        text-align: center;
+        border-radius: 8px;
+        margin: 20px;
+    }
+
+    .preview-image {
+        max-height: 300px;
+        max-width: 100%;
+        border-radius: 8px;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    }
+
+    .stat-box {
+        background: #f8f9fa;
+        border-left: 4px solid #4A90E2;
+        padding: 15px;
+        border-radius: 6px;
+        margin-bottom: 15px;
+    }
+
+    .stat-label {
+        font-size: 0.75rem;
+        color: #6c757d;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        margin-bottom: 5px;
+    }
+
+    .stat-value {
+        font-size: 1.1rem;
+        color: #2C3E50;
+        font-weight: 600;
+    }
+
+    /* Prediction Badge */
+    .prediction-card {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        padding: 30px;
+        text-align: center;
+        border-radius: 12px;
+        margin: 20px;
+    }
+
+    .prediction-card.cancer {
+        background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+    }
+
+    .prediction-card.normal {
+        background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+    }
+
+    .prediction-title {
+        font-size: 1.8rem;
+        font-weight: 700;
+        margin-bottom: 10px;
+    }
+
+    .prediction-subtitle {
+        font-size: 1rem;
+        opacity: 0.9;
+    }
+
+    /* Confidence Meter */
+    .confidence-container {
+        text-align: center;
+        padding: 30px;
+    }
+
+    .confidence-meter {
+        width: 200px;
+        height: 200px;
+        margin: 0 auto 20px;
+        position: relative;
+    }
+
+    .confidence-svg {
+        transform: rotate(-90deg);
+    }
+
+    .confidence-bg {
+        fill: none;
+        stroke: #e9ecef;
+        stroke-width: 15;
+    }
+
+    .confidence-fill {
+        fill: none;
+        stroke: #4A90E2;
+        stroke-width: 15;
+        stroke-linecap: round;
+        transition: stroke-dashoffset 1s ease;
+    }
+
+    .confidence-fill.high {
+        stroke: #28a745;
+    }
+
+    .confidence-fill.medium {
+        stroke: #ffc107;
+    }
+
+    .confidence-fill.low {
+        stroke: #dc3545;
+    }
+
+    .confidence-number {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        font-size: 2.5rem;
+        font-weight: 700;
+        color: #2C3E50;
+    }
+
+    .confidence-label {
+        font-size: 0.9rem;
+        color: #6c757d;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+    }
+
+    /* Comparison Chart */
+    .comparison-chart {
+        padding: 30px;
+    }
+
+    .model-bar {
+        margin-bottom: 25px;
+    }
+
+    .model-name {
+        font-weight: 600;
+        color: #2C3E50;
+        margin-bottom: 8px;
+        font-size: 0.95rem;
+    }
+
+    .bar-container {
+        background: #e9ecef;
+        border-radius: 20px;
+        height: 40px;
+        position: relative;
+        overflow: hidden;
+    }
+
+    .bar-fill {
+        background: linear-gradient(90deg, #4A90E2 0%, #667eea 100%);
+        height: 100%;
+        border-radius: 20px;
+        transition: width 1.5s ease;
+        display: flex;
+        align-items: center;
+        justify-content: flex-end;
+        padding-right: 15px;
+        color: white;
+        font-weight: 600;
+        font-size: 0.9rem;
+    }
+
+    .bar-fill.regnet {
+        background: linear-gradient(90deg, #f093fb 0%, #f5576c 100%);
+    }
+
+    .bar-fill.vgg16 {
+        background: linear-gradient(90deg, #4facfe 0%, #00f2fe 100%);
+    }
+
+    /* Metrics Grid */
+    .metrics-grid {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 15px;
+        padding: 20px;
+    }
+
+    .metric-item {
+        background: #f8f9fa;
+        padding: 20px;
+        border-radius: 8px;
+        border-left: 3px solid #4A90E2;
+        text-align: center;
+    }
+
+    .metric-icon {
+        font-size: 2rem;
+        color: #4A90E2;
+        margin-bottom: 10px;
+    }
+
+    .metric-value {
+        font-size: 1.5rem;
+        font-weight: 700;
+        color: #2C3E50;
+        margin-bottom: 5px;
+    }
+
+    .metric-label {
+        font-size: 0.8rem;
+        color: #6c757d;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+
+    /* Action Button */
+    .action-btn {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        border: none;
+        padding: 15px 30px;
+        border-radius: 8px;
+        font-weight: 600;
+        font-size: 1rem;
+        transition: all 0.3s ease;
+        box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+    }
+
+    .action-btn:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
+        color: white;
+    }
+
+    @media (max-width: 768px) {
+        .metrics-grid {
+            grid-template-columns: 1fr;
+        }
+    }
+</style>
+
+<div class="results-wrapper">
+    <!-- Top Bar -->
+    <div class="top-bar">
+        <div class="container">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <a href="{% url 'detection:history' %}" class="btn btn-link text-decoration-none text-muted">
+                        <i class="fas fa-arrow-left me-2"></i>Back to History
+                    </a>
+                </div>
+                <div>
+                    <h4 class="mb-0 fw-bold text-muted" style="color: #2C3E50;">
+                        <i class="fas fa-file-medical me-2" style="color: #4A90E2;"></i>Detection Report
+                    </h4>
+                </div>
+                <div>
+                    <span class="badge bg-light text-muted">{{ image.upload_date|date:"M d, Y" }}</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="container py-4">
+        {% if detection_results %}
+        <div class="row g-4">
+            <!-- Left Column: Image & Info -->
+            <div class="col-lg-5">
+                <!-- Image Card -->
+                <div class="medical-card">
+                    <div class="card-header-custom">
+                        <h6 class="card-title">
+                            <i class="fas fa-image me-2"></i>Medical Image
+                        </h6>
+                    </div>
+                    <div class="image-container">
+                        {% if image.file %}
+                        <img src="{{ image.file.url }}" alt="{{ image.filename }}" class="preview-image">
+                        {% elif image.file_url %}
+                        <img src="{{ image.file_url }}" alt="{{ image.filename }}" class="preview-image">
+                        {% endif %}
+                    </div>
+                </div>
+
+                <!-- Image Details Card -->
+                <div class="medical-card">
+                    <div class="card-header-custom">
+                        <h6 class="card-title">
+                            <i class="fas fa-info-circle me-2"></i>Image Details
+                        </h6>
+                    </div>
+                    <div class="p-3">
+                        <div class="stat-box">
+                            <div class="stat-label">Filename</div>
+                            <div class="stat-value">{{ image.filename }}</div>
+                        </div>
+                        <div class="stat-box">
+                            <div class="stat-label">File Size</div>
+                            <div class="stat-value">{{ image.file_size|filesizeformat }}</div>
+                        </div>
+                        <div class="stat-box">
+                            <div class="stat-label">Upload Date</div>
+                            <div class="stat-value">{{ image.upload_date|date:"M d, Y h:i A" }}</div>
+                        </div>
+                        <div class="stat-box">
+                            <div class="stat-label">Status</div>
+                            <div class="stat-value">
+                                <span class="badge bg-success">Analyzed</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right Column: Results -->
+            <div class="col-lg-7">
+                {% for result in detection_results %}
+                {% if forloop.first %}
+                <!-- Primary Prediction Card -->
+                <div class="prediction-card {% if result.prediction == 'Cancer' %}cancer{% else %}normal{% endif %}">
+                    <div class="prediction-title">
+                        {% if result.prediction == 'Cancer' %}
+                        <i class="fas fa-exclamation-triangle me-2"></i>Cancer Detected
+                        {% else %}
+                        <i class="fas fa-check-circle me-2"></i>No Cancer Detected
+                        {% endif %}
+                    </div>
+                    <div class="prediction-subtitle">Primary Model: {{ result.model_name }}</div>
+                </div>
+
+                <!-- Confidence Meter Card -->
+                <div class="medical-card">
+                    <div class="card-header-custom">
+                        <h6 class="card-title">
+                            <i class="fas fa-chart-pie me-2"></i>Confidence Analysis
+                        </h6>
+                    </div>
+                    <div class="confidence-container">
+                        <div class="confidence-meter">
+                            <svg class="confidence-svg" width="200" height="200">
+                                <circle class="confidence-bg" cx="100" cy="100" r="85"></circle>
+                                <circle class="confidence-fill {% if result.confidence_percentage >= 90 %}high{% elif result.confidence_percentage >= 70 %}medium{% else %}low{% endif %}"
+                                        cx="100" cy="100" r="85"
+                                        stroke-dasharray="{{ result.confidence_percentage|floatformat:0 }} 100"
+                                        style="stroke-dasharray: calc({{ result.confidence_percentage }} * 534.07 / 100) 534.07;">
+                                </circle>
+                            </svg>
+                            <div class="confidence-number">{{ result.confidence_percentage|floatformat:1 }}%</div>
+                        </div>
+                        <div class="confidence-label">Detection Confidence</div>
+                    </div>
+                </div>
+                {% endif %}
+                {% endfor %}
+
+                <!-- Model Comparison Chart -->
+                <div class="medical-card">
+                    <div class="card-header-custom">
+                        <h6 class="card-title">
+                            <i class="fas fa-chart-bar me-2"></i>Model Comparison
+                        </h6>
+                    </div>
+                    <div class="comparison-chart">
+                        {% for result in detection_results %}
+                        <div class="model-bar">
+                            <div class="model-name">
+                                <i class="fas fa-microchip me-2"></i>{{ result.model_name }} Model
+                                <span class="float-end text-muted">{{ result.prediction }}</span>
+                            </div>
+                            <div class="bar-container">
+                                <div class="bar-fill {% if result.model_name == 'RegNetY320' %}regnet{% else %}vgg16{% endif %}"
+                                     style="width: {{ result.confidence_percentage }}%;">
+                                    {{ result.confidence_percentage|floatformat:1 }}%
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+
+                <!-- Metrics Grid -->
+                <div class="medical-card">
+                    <div class="card-header-custom">
+                        <h6 class="card-title">
+                            <i class="fas fa-tachometer-alt me-2"></i>Performance Metrics
+                        </h6>
+                    </div>
+                    <div class="metrics-grid">
+                        {% for result in detection_results %}
+                        <div class="metric-item">
+                            <div class="metric-icon"><i class="fas fa-clock"></i></div>
+                            <div class="metric-value">{{ result.processing_time|floatformat:2 }}s</div>
+                            <div class="metric-label">{{ result.model_name }} Time</div>
+                        </div>
+                        {% endfor %}
+                        <div class="metric-item">
+                            <div class="metric-icon"><i class="fas fa-calendar"></i></div>
+                            <div class="metric-value">{{ detection_results.0.created_at|date:"M d" }}</div>
+                            <div class="metric-label">Analysis Date</div>
+                        </div>
+                        <div class="metric-item">
+                            <div class="metric-icon"><i class="fas fa-code-branch"></i></div>
+                            <div class="metric-value">{{ detection_results.0.model_version }}</div>
+                            <div class="metric-label">Model Version</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Action Button -->
+                <div class="text-center mt-4">
+                    <a href="{% url 'reports:generate' detection_results.0.id %}" class="action-btn">
+                        <i class="fas fa-file-pdf me-2"></i>Generate Medical Report
+                    </a>
+                </div>
             </div>
         </div>
 
+        {% else %}
+        <!-- No Results - Ready for Analysis -->
         <div class="row g-4">
-            <!-- Image Preview -->
-            <div class="col-md-6">
-                <div class="card border-0 shadow-sm">
-                    <div class="card-header bg-white border-bottom">
-                        <h5 class="fw-bold mb-0">
-                            <i class="fas fa-image text-primary me-2"></i>Image
-                        </h5>
+            <div class="col-lg-5">
+                <div class="medical-card">
+                    <div class="card-header-custom">
+                        <h6 class="card-title">
+                            <i class="fas fa-image me-2"></i>Medical Image
+                        </h6>
                     </div>
-                    <div class="card-body text-center p-4">
+                    <div class="image-container">
                         {% if image.file %}
-                        <img src="{{ image.file.url }}" alt="{{ image.filename }}" class="img-fluid rounded" style="max-height: 400px;">
+                        <img src="{{ image.file.url }}" alt="{{ image.filename }}" class="preview-image">
                         {% elif image.file_url %}
-                        <img src="{{ image.file_url }}" alt="{{ image.filename }}" class="img-fluid rounded" style="max-height: 400px;">
-                        {% else %}
-                        <div class="py-5">
-                            <i class="fas fa-image text-muted mb-3" style="font-size: 4rem;"></i>
-                            <p class="text-muted">Image not available</p>
-                        </div>
-                        {% endif %}
-
-                        <hr class="my-4">
-
-                        <div class="row text-start">
-                            <div class="col-6 mb-3">
-                                <small class="text-muted">Filename</small>
-                                <p class="mb-0 fw-medium">{{ image.filename }}</p>
-                            </div>
-                            <div class="col-6 mb-3">
-                                <small class="text-muted">File Size</small>
-                                <p class="mb-0 fw-medium">{{ image.file_size|filesizeformat }}</p>
-                            </div>
-                            <div class="col-6 mb-3">
-                                <small class="text-muted">Upload Date</small>
-                                <p class="mb-0 fw-medium">{{ image.upload_date|date:"M d, Y h:i A" }}</p>
-                            </div>
-                            <div class="col-6 mb-3">
-                                <small class="text-muted">Status</small>
-                                <p class="mb-0">
-                                    {% if image.status == 'processed' %}
-                                    <span class="badge bg-success">Processed</span>
-                                    {% elif image.status == 'processing' %}
-                                    <span class="badge bg-warning">Processing</span>
-                                    {% elif image.status == 'pending' %}
-                                    <span class="badge bg-secondary">Pending</span>
-                                    {% else %}
-                                    <span class="badge bg-danger">Failed</span>
-                                    {% endif %}
-                                </p>
-                            </div>
-                        </div>
-
-                        {% if image.file %}
-                        <a href="{{ image.file.url }}" target="_blank" class="btn btn-outline-primary w-100">
-                            <i class="fas fa-download me-2"></i>Download Image
-                        </a>
+                        <img src="{{ image.file_url }}" alt="{{ image.filename }}" class="preview-image">
                         {% endif %}
                     </div>
                 </div>
             </div>
 
-            <!-- Detection Results -->
-            <div class="col-md-6">
-                {% if detection_results %}
-                    {% for result in detection_results %}
-                    <div class="card border-0 shadow-sm mb-4">
-                        <div class="card-header bg-white border-bottom">
-                            <h5 class="fw-bold mb-0">
-                                <i class="fas fa-brain text-primary me-2"></i>{{ result.model_name }} Results
-                            </h5>
-                        </div>
-                        <div class="card-body p-4">
-                            <!-- Prediction -->
-                            <div class="text-center mb-4">
-                                <h3 class="fw-bold mb-2">
-                                    {% if result.prediction == 'Cancer' %}
-                                    <span class="text-danger">
-                                        <i class="fas fa-exclamation-triangle me-2"></i>Cancer Detected
-                                    </span>
-                                    {% else %}
-                                    <span class="text-success">
-                                        <i class="fas fa-check-circle me-2"></i>No Cancer Detected
-                                    </span>
-                                    {% endif %}
-                                </h3>
-                            </div>
-
-                            <!-- Confidence -->
-                            <div class="text-center mb-4">
-                                <div class="confidence-meter mx-auto mb-3" style="--confidence: {{ result.confidence_percentage }};">
-                                    <div class="confidence-value">{{ result.confidence_percentage }}%</div>
-                                </div>
-                                <p class="text-muted mb-0">Confidence Score</p>
-                            </div>
-
-                            <hr class="my-4">
-
-                            <!-- Details -->
-                            <div class="row">
-                                <div class="col-6 mb-3">
-                                    <small class="text-muted">Model</small>
-                                    <p class="mb-0 fw-medium">{{ result.model_name }}</p>
-                                </div>
-                                <div class="col-6 mb-3">
-                                    <small class="text-muted">Processing Time</small>
-                                    <p class="mb-0 fw-medium">{{ result.processing_time|floatformat:2 }}s</p>
-                                </div>
-                                <div class="col-6 mb-3">
-                                    <small class="text-muted">Prediction</small>
-                                    <p class="mb-0 fw-medium">{{ result.prediction }}</p>
-                                </div>
-                                <div class="col-6 mb-3">
-                                    <small class="text-muted">Date</small>
-                                    <p class="mb-0 fw-medium">{{ result.created_at|date:"M d, Y" }}</p>
-                                </div>
-                            </div>
-
-                            <div class="d-grid gap-2 mt-4">
-                                <a href="{% url 'reports:generate' result.id %}" class="btn btn-primary">
-                                    <i class="fas fa-file-pdf me-2"></i>Generate Report
-                                </a>
-                            </div>
-                        </div>
+            <div class="col-lg-7">
+                <div class="medical-card" style="min-height: 500px;">
+                    <div class="card-header-custom">
+                        <h6 class="card-title">
+                            <i class="fas fa-brain me-2"></i>AI Analysis
+                        </h6>
                     </div>
-                    {% endfor %}
-                {% else %}
-                    <div class="card border-0 shadow-sm">
-                        <div class="card-body text-center py-5">
-                            <i class="fas fa-robot text-muted mb-3" style="font-size: 4rem;"></i>
-                            <h5 class="fw-bold mb-2">No Results Yet</h5>
-                            <p class="text-muted mb-4">Click the button below to run AI detection with RegNetY320 and VGG16 models.</p>
+                    <div class="p-5 text-center d-flex align-items-center justify-content-center" style="min-height: 400px;">
+                        <div>
+                            <div class="mb-4">
+                                <i class="fas fa-robot" style="font-size: 6rem; color: #4A90E2;"></i>
+                            </div>
+                            <h3 class="fw-bold mb-3" style="color: #2C3E50;">Ready for AI Detection</h3>
+                            <p class="text-muted mb-4">Analyze this medical image using advanced deep learning models</p>
 
-                            <!-- Run Detection Button -->
+                            <div class="mb-4">
+                                <div class="d-flex justify-content-center gap-3 mb-3">
+                                    <span class="badge bg-light text-dark px-3 py-2">
+                                        <i class="fas fa-microchip me-2"></i>RegNetY320
+                                    </span>
+                                    <span class="badge bg-light text-dark px-3 py-2">
+                                        <i class="fas fa-microchip me-2"></i>VGG16
+                                    </span>
+                                </div>
+                            </div>
+
                             <form method="post" action="{% url 'detection:results' image.id %}">
                                 {% csrf_token %}
-                                <button type="submit" name="run_detection" value="1" class="btn btn-primary btn-lg">
+                                <button type="submit" name="run_detection" value="1" class="action-btn">
                                     <i class="fas fa-brain me-2"></i>Run AI Detection
                                 </button>
                             </form>
-                            <small class="text-muted d-block mt-3">This will use trained PyTorch models to analyze the image</small>
+                            <small class="text-muted d-block mt-3">
+                                <i class="fas fa-clock me-1"></i>Analysis takes 5-10 seconds
+                            </small>
                         </div>
                     </div>
-                {% endif %}
+                </div>
             </div>
         </div>
+        {% endif %}
     </div>
 </div>
 {% endblock %}
