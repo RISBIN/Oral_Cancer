@@ -11,11 +11,12 @@ A web-based application that uses deep learning (RegNetY320 algorithm) to detect
 
 - **AI-Powered Detection**: RegNetY320 and VGG16 models for binary classification
 - **User Authentication**: Secure login/registration with role-based access
-- **Image Upload**: Drag-and-drop upload with Supabase Storage integration
-- **Real-time Results**: Instant detection with confidence scores
-- **Dashboard Analytics**: Comprehensive statistics and visualizations
-- **PDF Reports**: Generate professional medical reports
-- **Premium UI**: Clean white medical interface
+- **Image Upload**: Multi-file upload with camera capture, drag-and-drop, and quality guide
+- **Real-time Results**: Instant detection with animated confidence gauges and model comparison
+- **Dashboard Analytics**: Chart.js visualizations with pie charts, line graphs, and model performance stats
+- **Detection History**: Advanced filtering, search, grid/list view toggle with thumbnails
+- **PDF Reports**: Generate professional medical reports with detailed analysis
+- **Premium UI**: Clean white medical interface with modern animations
 - **Cloud Storage**: Supabase PostgreSQL database and file storage
 
 ## Tech Stack
@@ -29,6 +30,7 @@ A web-based application that uses deep learning (RegNetY320 algorithm) to detect
 ### Frontend
 - **Django Templates**: Server-side rendering
 - **Bootstrap 5**: CSS framework
+- **Chart.js**: Data visualizations
 - **JavaScript (Vanilla)**: Client-side interactivity
 - **Font Awesome**: Icons
 
@@ -319,7 +321,7 @@ This project is licensed under the MIT License - see LICENSE file for details.
 ## Support
 
 For issues and questions:
-- GitHub Issues: https://github.com/yourusername/oral_cancer/issues
+- GitHub Issues: https://github.com/RISBIN/Oral_Cancer/issues
 - Email: 192124017.sse@saveetha.com
 
 ## Disclaimer
