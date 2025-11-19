@@ -3,6 +3,62 @@
 
 {% block title %}Dashboard - OralCare AI{% endblock %}
 
+{% block extra_css %}
+<style>
+    .chart-container {
+        position: relative;
+        height: 250px;
+    }
+    .timeline-item {
+        position: relative;
+        padding-left: 30px;
+        padding-bottom: 20px;
+        border-left: 2px solid #e9ecef;
+    }
+    .timeline-item:last-child {
+        border-left: 2px solid transparent;
+        padding-bottom: 0;
+    }
+    .timeline-item::before {
+        content: '';
+        position: absolute;
+        left: -6px;
+        top: 0;
+        width: 10px;
+        height: 10px;
+        border-radius: 50%;
+        background: #4A90E2;
+    }
+    .timeline-item.cancer::before {
+        background: #dc3545;
+    }
+    .timeline-item.non-cancer::before {
+        background: #28a745;
+    }
+    .timeline-item.report::before {
+        background: #6f42c1;
+    }
+    .progress-thin {
+        height: 6px;
+    }
+    .stat-trend {
+        font-size: 0.75rem;
+    }
+    .thumbnail-preview {
+        width: 50px;
+        height: 50px;
+        object-fit: cover;
+        border-radius: 8px;
+    }
+    .model-card {
+        transition: transform 0.2s;
+    }
+    .model-card:hover {
+        transform: translateY(-2px);
+    }
+</style>
+{% endblock %}
+
 {% block content %}
 <div class="bg-light min-vh-100 py-4">
     <div class="container-fluid px-4">
@@ -19,7 +75,7 @@
             </div>
         </div>
 
-        <!-- Stats Cards -->
+        <!-- Primary Stats Cards -->
         <div class="row g-4 mb-4">
             <div class="col-md-3">
                 <div class="stats-card">
@@ -27,7 +83,10 @@
                         <i class="fas fa-images"></i>
                     </div>
                     <h3 class="fw-bold mb-0">{{ total_images }}</h3>
-                    <p class="text-muted mb-0">Total Scans</p>
+                    <p class="text-muted mb-1">Total Scans</p>
+                    <small class="stat-trend text-success">
+                        <i class="fas fa-calendar-week me-1"></i>{{ scans_this_week }} this week
+                    </small>
                 </div>
             </div>
 
@@ -37,7 +96,10 @@
                         <i class="fas fa-check-circle"></i>
                     </div>
                     <h3 class="fw-bold mb-0">{{ processed_images }}</h3>
-                    <p class="text-muted mb-0">Processed</p>
+                    <p class="text-muted mb-1">Processed</p>
+                    <small class="stat-trend text-muted">
+                        <i class="fas fa-clock me-1"></i>{{ avg_processing_time }}s avg
+                    </small>
                 </div>
             </div>
 
@@ -47,7 +109,10 @@
                         <i class="fas fa-exclamation-triangle"></i>
                     </div>
                     <h3 class="fw-bold mb-0">{{ cancer_detections }}</h3>
-                    <p class="text-muted mb-0">Cancer Detected</p>
+                    <p class="text-muted mb-1">Cancer Detected</p>
+                    <small class="stat-trend text-danger">
+                        <i class="fas fa-percentage me-1"></i>{{ detection_rate }}% rate
+                    </small>
                 </div>
             </div>
 
@@ -57,12 +122,188 @@
                         <i class="fas fa-file-pdf"></i>
                     </div>
                     <h3 class="fw-bold mb-0">{{ total_reports }}</h3>
-                    <p class="text-muted mb-0">Reports Generated</p>
+                    <p class="text-muted mb-1">Reports Generated</p>
+                    <small class="stat-trend text-primary">
+                        <i class="fas fa-chart-line me-1"></i>{{ avg_confidence }}% avg conf
+                    </small>
                 </div>
             </div>
         </div>
 
-        <!-- Recent Scans & Quick Actions -->
+        <!-- Secondary Stats -->
+        <div class="row g-4 mb-4">
+            <div class="col-md-2">
+                <div class="card border-0 shadow-sm h-100">
+                    <div class="card-body text-center">
+                        <i class="fas fa-shield-alt text-success mb-2" style="font-size: 1.5rem;"></i>
+                        <h4 class="fw-bold mb-0">{{ non_cancer_detections }}</h4>
+                        <small class="text-muted">Non-Cancer</small>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-2">
+                <div class="card border-0 shadow-sm h-100">
+                    <div class="card-body text-center">
+                        <i class="fas fa-bullseye text-primary mb-2" style="font-size: 1.5rem;"></i>
+                        <h4 class="fw-bold mb-0">{{ high_confidence_count }}</h4>
+                        <small class="text-muted">High Confidence</small>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-2">
+                <div class="card border-0 shadow-sm h-100">
+                    <div class="card-body text-center">
+                        <i class="fas fa-calendar-alt text-info mb-2" style="font-size: 1.5rem;"></i>
+                        <h4 class="fw-bold mb-0">{{ scans_this_month }}</h4>
+                        <small class="text-muted">This Month</small>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-2">
+                <div class="card border-0 shadow-sm h-100">
+                    <div class="card-body text-center">
+                        <i class="fas fa-tachometer-alt text-warning mb-2" style="font-size: 1.5rem;"></i>
+                        <h4 class="fw-bold mb-0">{{ avg_confidence }}%</h4>
+                        <small class="text-muted">Avg Confidence</small>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-2">
+                <div class="card border-0 shadow-sm h-100">
+                    <div class="card-body text-center">
+                        <i class="fas fa-stopwatch text-secondary mb-2" style="font-size: 1.5rem;"></i>
+                        <h4 class="fw-bold mb-0">{{ avg_processing_time }}s</h4>
+                        <small class="text-muted">Avg Time</small>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-2">
+                <div class="card border-0 shadow-sm h-100">
+                    <div class="card-body text-center">
+                        <i class="fas fa-percentage text-danger mb-2" style="font-size: 1.5rem;"></i>
+                        <h4 class="fw-bold mb-0">{{ detection_rate }}%</h4>
+                        <small class="text-muted">Detection Rate</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Charts Row -->
+        <div class="row g-4 mb-4">
+            <!-- Pie Chart -->
+            <div class="col-md-4">
+                <div class="card border-0 shadow-sm h-100">
+                    <div class="card-header bg-white border-bottom">
+                        <h5 class="fw-bold mb-0">Detection Distribution</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="chart-container">
+                            <canvas id="pieChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Line Chart -->
+            <div class="col-md-8">
+                <div class="card border-0 shadow-sm h-100">
+                    <div class="card-header bg-white border-bottom">
+                        <h5 class="fw-bold mb-0">Scans This Week</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="chart-container">
+                            <canvas id="lineChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Model Performance Comparison -->
+        <div class="row g-4 mb-4">
+            <div class="col-12">
+                <div class="card border-0 shadow-sm">
+                    <div class="card-header bg-white border-bottom">
+                        <h5 class="fw-bold mb-0">Model Performance Comparison</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <!-- RegNetY320 -->
+                            <div class="col-md-6">
+                                <div class="card bg-light border-0 model-card">
+                                    <div class="card-body">
+                                        <div class="d-flex justify-content-between align-items-center mb-3">
+                                            <div>
+                                                <h6 class="fw-bold mb-0">RegNetY320</h6>
+                                                <small class="text-muted">Primary Model - 89.4% Accuracy</small>
+                                            </div>
+                                            <span class="badge bg-primary">Recommended</span>
+                                        </div>
+                                        <div class="row text-center">
+                                            <div class="col-4">
+                                                <h5 class="fw-bold text-primary mb-0">{{ regnet_total }}</h5>
+                                                <small class="text-muted">Total</small>
+                                            </div>
+                                            <div class="col-4">
+                                                <h5 class="fw-bold text-danger mb-0">{{ regnet_cancer }}</h5>
+                                                <small class="text-muted">Cancer</small>
+                                            </div>
+                                            <div class="col-4">
+                                                <h5 class="fw-bold text-success mb-0">{{ regnet_avg_confidence }}%</h5>
+                                                <small class="text-muted">Avg Conf</small>
+                                            </div>
+                                        </div>
+                                        <div class="mt-3">
+                                            <small class="text-muted">Confidence Level</small>
+                                            <div class="progress progress-thin mt-1">
+                                                <div class="progress-bar bg-primary" style="width: {{ regnet_avg_confidence }}%"></div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- VGG16 -->
+                            <div class="col-md-6">
+                                <div class="card bg-light border-0 model-card">
+                                    <div class="card-body">
+                                        <div class="d-flex justify-content-between align-items-center mb-3">
+                                            <div>
+                                                <h6 class="fw-bold mb-0">VGG16</h6>
+                                                <small class="text-muted">Secondary Model - 73.7% Accuracy</small>
+                                            </div>
+                                            <span class="badge bg-secondary">Comparison</span>
+                                        </div>
+                                        <div class="row text-center">
+                                            <div class="col-4">
+                                                <h5 class="fw-bold text-primary mb-0">{{ vgg16_total }}</h5>
+                                                <small class="text-muted">Total</small>
+                                            </div>
+                                            <div class="col-4">
+                                                <h5 class="fw-bold text-danger mb-0">{{ vgg16_cancer }}</h5>
+                                                <small class="text-muted">Cancer</small>
+                                            </div>
+                                            <div class="col-4">
+                                                <h5 class="fw-bold text-success mb-0">{{ vgg16_avg_confidence }}%</h5>
+                                                <small class="text-muted">Avg Conf</small>
+                                            </div>
+                                        </div>
+                                        <div class="mt-3">
+                                            <small class="text-muted">Confidence Level</small>
+                                            <div class="progress progress-thin mt-1">
+                                                <div class="progress-bar bg-secondary" style="width: {{ vgg16_avg_confidence }}%"></div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Recent Scans & Activity Timeline -->
         <div class="row g-4">
             <!-- Recent Scans -->
             <div class="col-md-8">
@@ -82,39 +323,67 @@
                                 <thead>
                                     <tr>
                                         <th>Image</th>
-                                        <th>Status</th>
+                                        <th>Prediction</th>
+                                        <th>Confidence</th>
                                         <th>Date</th>
                                         <th>Action</th>
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    {% for image in recent_images %}
+                                    {% for item in recent_images %}
                                     <tr>
                                         <td>
                                             <div class="d-flex align-items-center">
-                                                <i class="fas fa-image text-primary me-2"></i>
-                                                {{ image.filename }}
+                                                {% if item.image.file_url %}
+                                                <img src="{{ item.image.file_url }}" alt="Thumbnail" class="thumbnail-preview me-2">
+                                                {% elif item.image.file %}
+                                                <img src="{{ item.image.file.url }}" alt="Thumbnail" class="thumbnail-preview me-2">
+                                                {% else %}
+                                                <div class="thumbnail-preview me-2 bg-light d-flex align-items-center justify-content-center">
+                                                    <i class="fas fa-image text-muted"></i>
+                                                </div>
+                                                {% endif %}
+                                                <span class="text-truncate" style="max-width: 150px;">{{ item.image.filename }}</span>
                                             </div>
                                         </td>
                                         <td>
-                                            {% if image.status == 'processed' %}
-                                            <span class="badge bg-success">Processed</span>
-                                            {% elif image.status == 'processing' %}
-                                            <span class="badge bg-warning">Processing</span>
-                                            {% elif image.status == 'pending' %}
-                                            <span class="badge bg-secondary">Pending</span>
+                                            {% if item.primary_result %}
+                                                {% if item.primary_result.prediction == 'Cancer' %}
+                                                <span class="badge bg-danger">
+                                                    <i class="fas fa-exclamation-circle me-1"></i>Cancer
+                                                </span>
+                                                {% else %}
+                                                <span class="badge bg-success">
+                                                    <i class="fas fa-check-circle me-1"></i>Non-Cancer
+                                                </span>
+                                                {% endif %}
                                             {% else %}
-                                            <span class="badge bg-danger">Failed</span>
+                                                <span class="badge bg-secondary">Pending</span>
                                             {% endif %}
                                         </td>
-                                        <td>{{ image.upload_date|date:"M d, Y" }}</td>
                                         <td>
-                                            {% if image.has_results %}
-                                            <a href="{% url 'detection:results' image.id %}" class="btn btn-sm btn-primary">
-                                                View Results
+                                            {% if item.primary_result %}
+                                                <div class="d-flex align-items-center">
+                                                    <div class="progress progress-thin flex-grow-1 me-2" style="width: 60px;">
+                                                        <div class="progress-bar {% if item.primary_result.confidence_score >= 0.8 %}bg-success{% elif item.primary_result.confidence_score >= 0.6 %}bg-warning{% else %}bg-danger{% endif %}"
+                                                             style="width: {{ item.primary_result.confidence_percentage }}%"></div>
+                                                    </div>
+                                                    <small>{{ item.primary_result.confidence_percentage }}%</small>
+                                                </div>
+                                            {% else %}
+                                                <span class="text-muted">-</span>
+                                            {% endif %}
+                                        </td>
+                                        <td>{{ item.image.upload_date|date:"M d, Y" }}</td>
+                                        <td>
+                                            {% if item.image.has_results %}
+                                            <a href="{% url 'detection:results' item.image.id %}" class="btn btn-sm btn-primary">
+                                                <i class="fas fa-eye me-1"></i>View
                                             </a>
                                             {% else %}
-                                            <button class="btn btn-sm btn-secondary" disabled>No Results</button>
+                                            <a href="{% url 'detection:results' item.image.id %}" class="btn btn-sm btn-outline-primary">
+                                                <i class="fas fa-play me-1"></i>Analyze
+                                            </a>
                                             {% endif %}
                                         </td>
                                     </tr>
@@ -135,8 +404,40 @@
                 </div>
             </div>
 
-            <!-- Quick Actions & Info -->
+            <!-- Sidebar: Activity Timeline & Quick Actions -->
             <div class="col-md-4">
+                <!-- Activity Timeline -->
+                <div class="card border-0 shadow-sm mb-4">
+                    <div class="card-header bg-white border-bottom">
+                        <h5 class="fw-bold mb-0">Recent Activity</h5>
+                    </div>
+                    <div class="card-body">
+                        {% if recent_detections %}
+                        <div class="timeline">
+                            {% for detection in recent_detections|slice:":5" %}
+                            <div class="timeline-item {% if detection.prediction == 'Cancer' %}cancer{% else %}non-cancer{% endif %}">
+                                <div class="d-flex justify-content-between">
+                                    <small class="fw-medium">
+                                        {% if detection.prediction == 'Cancer' %}
+                                        <span class="text-danger">Cancer detected</span>
+                                        {% else %}
+                                        <span class="text-success">Non-cancer</span>
+                                        {% endif %}
+                                    </small>
+                                    <small class="text-muted">{{ detection.confidence_percentage }}%</small>
+                                </div>
+                                <small class="text-muted">
+                                    {{ detection.model_name }} - {{ detection.created_at|timesince }} ago
+                                </small>
+                            </div>
+                            {% endfor %}
+                        </div>
+                        {% else %}
+                        <p class="text-muted text-center mb-0">No recent activity</p>
+                        {% endif %}
+                    </div>
+                </div>
+
                 <!-- Quick Actions -->
                 <div class="card border-0 shadow-sm mb-4">
                     <div class="card-header bg-white border-bottom">
@@ -157,38 +458,95 @@
                     </div>
                 </div>
 
-                <!-- Account Info -->
-                <div class="card border-0 shadow-sm">
-                    <div class="card-header bg-white border-bottom">
-                        <h5 class="fw-bold mb-0">Account Info</h5>
-                    </div>
-                    <div class="card-body">
-                        <div class="mb-3">
-                            <small class="text-muted">Name</small>
-                            <p class="mb-0 fw-medium">{{ user.get_full_name }}</p>
-                        </div>
-                        <div class="mb-3">
-                            <small class="text-muted">Email</small>
-                            <p class="mb-0 fw-medium">{{ user.email }}</p>
-                        </div>
-                        <div class="mb-3">
-                            <small class="text-muted">Role</small>
-                            <p class="mb-0 fw-medium text-capitalize">{{ user.role }}</p>
-                        </div>
-                        {% if user.institution %}
-                        <div class="mb-3">
-                            <small class="text-muted">Institution</small>
-                            <p class="mb-0 fw-medium">{{ user.institution }}</p>
-                        </div>
-                        {% endif %}
-                        <div>
-                            <small class="text-muted">Member Since</small>
-                            <p class="mb-0 fw-medium">{{ user.created_at|date:"M d, Y" }}</p>
-                        </div>
-                    </div>
-                </div>
             </div>
         </div>
     </div>
 </div>
+{% endblock %}
+
+{% block extra_js %}
+<!-- Chart.js -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<script>
+    // Pie Chart - Detection Distribution
+    const pieCtx = document.getElementById('pieChart').getContext('2d');
+    const pieData = {{ pie_data|safe }};
+
+    new Chart(pieCtx, {
+        type: 'doughnut',
+        data: {
+            labels: ['Cancer', 'Non-Cancer'],
+            datasets: [{
+                data: pieData,
+                backgroundColor: ['#dc3545', '#28a745'],
+                borderWidth: 0
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    position: 'bottom',
+                    labels: {
+                        padding: 20,
+                        usePointStyle: true
+                    }
+                }
+            },
+            cutout: '60%'
+        }
+    });
+
+    // Line Chart - Weekly Scans
+    const lineCtx = document.getElementById('lineChart').getContext('2d');
+    const weeklyLabels = {{ weekly_labels|safe }};
+    const weeklyData = {{ weekly_data|safe }};
+
+    new Chart(lineCtx, {
+        type: 'line',
+        data: {
+            labels: weeklyLabels,
+            datasets: [{
+                label: 'Scans',
+                data: weeklyData,
+                borderColor: '#4A90E2',
+                backgroundColor: 'rgba(74, 144, 226, 0.1)',
+                borderWidth: 3,
+                fill: true,
+                tension: 0.4,
+                pointBackgroundColor: '#4A90E2',
+                pointBorderColor: '#fff',
+                pointBorderWidth: 2,
+                pointRadius: 5,
+                pointHoverRadius: 7
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    display: false
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    ticks: {
+                        stepSize: 1
+                    },
+                    grid: {
+                        color: 'rgba(0, 0, 0, 0.05)'
+                    }
+                },
+                x: {
+                    grid: {
+                        display: false
+                    }
+                }
+            }
+        }
+    });
+</script>
 {% endblock %}

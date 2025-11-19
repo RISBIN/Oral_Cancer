@@ -7,8 +7,190 @@
 <style>
     .upload-preview {
         max-width: 100%;
-        max-height: 400px;
+        max-height: 300px;
         border-radius: 0.75rem;
+    }
+
+    /* Animated upload zone */
+    .upload-zone {
+        transition: all 0.3s ease;
+    }
+
+    .upload-zone.dragover {
+        background: linear-gradient(135deg, rgba(74, 144, 226, 0.1) 0%, rgba(74, 144, 226, 0.05) 100%);
+        border-color: #4A90E2;
+        transform: scale(1.02);
+    }
+
+    .upload-zone:hover {
+        border-color: #4A90E2;
+    }
+
+    /* Animated icon */
+    .upload-icon-animated {
+        animation: float 3s ease-in-out infinite;
+    }
+
+    @keyframes float {
+        0%, 100% { transform: translateY(0); }
+        50% { transform: translateY(-10px); }
+    }
+
+    /* Pulse animation */
+    .pulse {
+        animation: pulse 2s infinite;
+    }
+
+    @keyframes pulse {
+        0% { box-shadow: 0 0 0 0 rgba(74, 144, 226, 0.4); }
+        70% { box-shadow: 0 0 0 15px rgba(74, 144, 226, 0); }
+        100% { box-shadow: 0 0 0 0 rgba(74, 144, 226, 0); }
+    }
+
+    /* File queue styles */
+    .file-queue-item {
+        padding: 12px;
+        border-radius: 8px;
+        background: #f8f9fa;
+        margin-bottom: 8px;
+        transition: all 0.3s ease;
+    }
+
+    .file-queue-item:hover {
+        background: #e9ecef;
+    }
+
+    .file-queue-item.uploading {
+        background: linear-gradient(135deg, #e3f2fd 0%, #f3e5f5 100%);
+    }
+
+    .file-queue-item.success {
+        background: #d4edda;
+    }
+
+    .file-queue-item.error {
+        background: #f8d7da;
+    }
+
+    /* Thumbnail in queue */
+    .queue-thumbnail {
+        width: 40px;
+        height: 40px;
+        object-fit: cover;
+        border-radius: 6px;
+    }
+
+    /* Quality guide */
+    .quality-example {
+        width: 60px;
+        height: 60px;
+        border-radius: 8px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.5rem;
+    }
+
+    .quality-good {
+        background: #d4edda;
+        color: #28a745;
+    }
+
+    .quality-bad {
+        background: #f8d7da;
+        color: #dc3545;
+    }
+
+    /* Recent upload thumbnail */
+    .recent-thumbnail {
+        width: 45px;
+        height: 45px;
+        object-fit: cover;
+        border-radius: 6px;
+    }
+
+    /* Success animation */
+    .success-checkmark {
+        width: 80px;
+        height: 80px;
+        border-radius: 50%;
+        background: #28a745;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        animation: scaleIn 0.5s ease;
+    }
+
+    @keyframes scaleIn {
+        0% { transform: scale(0); }
+        50% { transform: scale(1.2); }
+        100% { transform: scale(1); }
+    }
+
+    /* Step progress */
+    .step-indicator {
+        display: flex;
+        justify-content: space-between;
+        margin-bottom: 20px;
+    }
+
+    .step {
+        flex: 1;
+        text-align: center;
+        position: relative;
+    }
+
+    .step::after {
+        content: '';
+        position: absolute;
+        top: 15px;
+        left: 50%;
+        width: 100%;
+        height: 2px;
+        background: #e9ecef;
+    }
+
+    .step:last-child::after {
+        display: none;
+    }
+
+    .step.active::after {
+        background: #4A90E2;
+    }
+
+    .step-circle {
+        width: 30px;
+        height: 30px;
+        border-radius: 50%;
+        background: #e9ecef;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        margin-bottom: 8px;
+        position: relative;
+        z-index: 1;
+        font-size: 0.8rem;
+        font-weight: bold;
+    }
+
+    .step.active .step-circle {
+        background: #4A90E2;
+        color: white;
+    }
+
+    .step.completed .step-circle {
+        background: #28a745;
+        color: white;
+    }
+
+    /* Camera button for mobile */
+    .camera-btn {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        border: none;
+    }
+
+    .camera-btn:hover {
+        background: linear-gradient(135deg, #5a6fd6 0%, #6a4190 100%);
     }
 </style>
 {% endblock %}
@@ -21,6 +203,11 @@
                 <h2 class="fw-bold mb-1">Upload Medical Image</h2>
                 <p class="text-muted">Upload oral pathology images for AI-powered cancer detection</p>
             </div>
+            <div class="col-auto">
+                <span class="badge bg-primary fs-6">
+                    <i class="fas fa-images me-1"></i>{{ total_uploads }} uploads
+                </span>
+            </div>
         </div>
 
         <div class="row g-4">
@@ -28,100 +215,288 @@
             <div class="col-md-8">
                 <div class="card border-0 shadow-sm">
                     <div class="card-body p-4">
+                        <!-- Step Progress -->
+                        <div class="step-indicator" id="stepIndicator">
+                            <div class="step active" id="step1">
+                                <div class="step-circle">1</div>
+                                <small class="d-block text-muted">Select</small>
+                            </div>
+                            <div class="step" id="step2">
+                                <div class="step-circle">2</div>
+                                <small class="d-block text-muted">Upload</small>
+                            </div>
+                            <div class="step" id="step3">
+                                <div class="step-circle">3</div>
+                                <small class="d-block text-muted">Process</small>
+                            </div>
+                        </div>
+
                         <form method="post" enctype="multipart/form-data" id="uploadForm">
                             {% csrf_token %}
 
                             <!-- Drag & Drop Zone -->
-                            <div class="upload-zone" id="uploadZone">
-                                <input type="file" id="fileInput" name="image" accept="image/jpeg,image/jpg,image/png" hidden>
+                            <div class="upload-zone pulse" id="uploadZone">
+                                <input type="file" id="fileInput" name="image" accept="image/jpeg,image/jpg,image/png" hidden multiple>
                                 <div class="text-center" id="uploadPrompt">
-                                    <div class="upload-icon">
+                                    <div class="upload-icon upload-icon-animated">
                                         <i class="fas fa-cloud-upload-alt"></i>
                                     </div>
-                                    <h5 class="fw-bold mb-2">Drag & Drop your image here</h5>
+                                    <h5 class="fw-bold mb-2">Drag & Drop your images here</h5>
                                     <p class="text-muted mb-3">or</p>
-                                    <button type="button" class="btn btn-primary" onclick="document.getElementById('fileInput').click()">
-                                        <i class="fas fa-folder-open me-2"></i>Browse Files
-                                    </button>
+                                    <div class="d-flex justify-content-center gap-2 flex-wrap">
+                                        <button type="button" class="btn btn-primary" onclick="document.getElementById('fileInput').click()">
+                                            <i class="fas fa-folder-open me-2"></i>Browse Files
+                                        </button>
+                                        <button type="button" class="btn camera-btn text-white" onclick="openCamera()">
+                                            <i class="fas fa-camera me-2"></i>Take Photo
+                                        </button>
+                                    </div>
                                     <p class="text-muted small mt-3 mb-0">
-                                        Supported formats: JPG, JPEG, PNG (Max 10MB)
+                                        Supported: JPG, PNG | Max 10MB per file | Multiple files allowed
                                     </p>
                                 </div>
 
-                                <!-- Preview -->
-                                <div id="previewSection" class="d-none">
-                                    <div class="text-center">
-                                        <img id="imagePreview" class="upload-preview mb-3" alt="Preview">
-                                        <div id="fileInfo" class="mb-3">
-                                            <p class="fw-medium mb-1" id="fileName"></p>
-                                            <p class="text-muted small mb-0" id="fileSize"></p>
-                                        </div>
-                                        <button type="button" class="btn btn-outline-danger me-2" onclick="clearUpload()">
-                                            <i class="fas fa-times me-2"></i>Clear
-                                        </button>
-                                        <button type="submit" class="btn btn-primary">
-                                            <i class="fas fa-upload me-2"></i>Upload & Process
-                                        </button>
+                                <!-- Success State -->
+                                <div id="successState" class="d-none text-center py-4">
+                                    <div class="success-checkmark mx-auto mb-3">
+                                        <i class="fas fa-check text-white fa-2x"></i>
                                     </div>
+                                    <h5 class="fw-bold text-success">Upload Complete!</h5>
+                                    <p class="text-muted">Redirecting to results...</p>
                                 </div>
                             </div>
 
-                            <!-- Progress Bar -->
-                            <div id="uploadProgress" class="mt-3 d-none">
+                            <!-- File Queue -->
+                            <div id="fileQueue" class="mt-3 d-none">
+                                <div class="d-flex justify-content-between align-items-center mb-2">
+                                    <h6 class="fw-bold mb-0">Selected Files</h6>
+                                    <button type="button" class="btn btn-sm btn-outline-danger" onclick="clearAllFiles()">
+                                        <i class="fas fa-trash me-1"></i>Clear All
+                                    </button>
+                                </div>
+                                <div id="fileList"></div>
+                                <div class="mt-3">
+                                    <button type="button" class="btn btn-primary w-100" onclick="uploadAllFiles()">
+                                        <i class="fas fa-upload me-2"></i>Upload All (<span id="fileCount">0</span> files)
+                                    </button>
+                                </div>
+                            </div>
+
+                            <!-- Overall Progress -->
+                            <div id="overallProgress" class="mt-3 d-none">
                                 <div class="d-flex justify-content-between mb-2">
-                                    <span class="small fw-medium">Uploading...</span>
+                                    <span class="small fw-medium" id="progressStatus">Uploading...</span>
                                     <span class="small fw-medium" id="progressText">0%</span>
                                 </div>
-                                <div class="progress">
-                                    <div class="progress-bar" role="progressbar" id="progressBar" style="width: 0%"></div>
+                                <div class="progress" style="height: 8px;">
+                                    <div class="progress-bar progress-bar-striped progress-bar-animated" role="progressbar" id="progressBar" style="width: 0%"></div>
                                 </div>
                             </div>
                         </form>
                     </div>
                 </div>
+
+                <!-- Image Quality Guide -->
+                <div class="card border-0 shadow-sm mt-4">
+                    <div class="card-header bg-white border-bottom">
+                        <h5 class="fw-bold mb-0">
+                            <i class="fas fa-lightbulb text-warning me-2"></i>Image Quality Guide
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <div class="d-flex align-items-center">
+                                    <div class="quality-example quality-good me-3">
+                                        <i class="fas fa-check"></i>
+                                    </div>
+                                    <div>
+                                        <h6 class="fw-bold mb-1 text-success">Good Image</h6>
+                                        <ul class="small text-muted mb-0 ps-3">
+                                            <li>Clear and in focus</li>
+                                            <li>Well-lit (natural light)</li>
+                                            <li>Centered subject</li>
+                                            <li>High resolution</li>
+                                        </ul>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="d-flex align-items-center">
+                                    <div class="quality-example quality-bad me-3">
+                                        <i class="fas fa-times"></i>
+                                    </div>
+                                    <div>
+                                        <h6 class="fw-bold mb-1 text-danger">Avoid</h6>
+                                        <ul class="small text-muted mb-0 ps-3">
+                                            <li>Blurry or out of focus</li>
+                                            <li>Poor lighting/shadows</li>
+                                            <li>Partial view only</li>
+                                            <li>Low resolution</li>
+                                        </ul>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <hr class="my-3">
+                        <div class="row g-2">
+                            <div class="col-auto">
+                                <span class="badge bg-light text-dark">
+                                    <i class="fas fa-sun text-warning me-1"></i>Good Lighting
+                                </span>
+                            </div>
+                            <div class="col-auto">
+                                <span class="badge bg-light text-dark">
+                                    <i class="fas fa-search-plus text-primary me-1"></i>Close-up Shot
+                                </span>
+                            </div>
+                            <div class="col-auto">
+                                <span class="badge bg-light text-dark">
+                                    <i class="fas fa-hand-paper text-info me-1"></i>Steady Hand
+                                </span>
+                            </div>
+                            <div class="col-auto">
+                                <span class="badge bg-light text-dark">
+                                    <i class="fas fa-adjust text-secondary me-1"></i>No Filters
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </div>
 
-            <!-- Instructions -->
+            <!-- Sidebar -->
             <div class="col-md-4">
+                <!-- Instructions -->
                 <div class="card border-0 shadow-sm mb-4">
                     <div class="card-header bg-white border-bottom">
                         <h5 class="fw-bold mb-0">
-                            <i class="fas fa-info-circle text-primary me-2"></i>Instructions
+                            <i class="fas fa-info-circle text-primary me-2"></i>Quick Guide
                         </h5>
                     </div>
                     <div class="card-body">
-                        <ol class="mb-0 ps-3">
-                            <li class="mb-2">Upload a clear oral pathology image</li>
-                            <li class="mb-2">Ensure good lighting and focus</li>
-                            <li class="mb-2">Supported formats: JPG, PNG</li>
-                            <li class="mb-2">Maximum file size: 10MB</li>
-                            <li>Wait for AI processing (~10 seconds)</li>
-                        </ol>
+                        <div class="d-flex mb-3">
+                            <div class="me-3">
+                                <span class="badge bg-primary rounded-circle p-2">1</span>
+                            </div>
+                            <div>
+                                <h6 class="fw-bold mb-1">Select Images</h6>
+                                <p class="text-muted small mb-0">Drag & drop or browse files</p>
+                            </div>
+                        </div>
+                        <div class="d-flex mb-3">
+                            <div class="me-3">
+                                <span class="badge bg-primary rounded-circle p-2">2</span>
+                            </div>
+                            <div>
+                                <h6 class="fw-bold mb-1">Upload</h6>
+                                <p class="text-muted small mb-0">Files are securely uploaded</p>
+                            </div>
+                        </div>
+                        <div class="d-flex">
+                            <div class="me-3">
+                                <span class="badge bg-primary rounded-circle p-2">3</span>
+                            </div>
+                            <div>
+                                <h6 class="fw-bold mb-1">Get Results</h6>
+                                <p class="text-muted small mb-0">AI analysis in ~10 seconds</p>
+                            </div>
+                        </div>
                     </div>
                 </div>
 
-                <div class="card border-0 shadow-sm">
+                <!-- Model Info -->
+                <div class="card border-0 shadow-sm mb-4">
                     <div class="card-header bg-white border-bottom">
                         <h5 class="fw-bold mb-0">
-                            <i class="fas fa-chart-bar text-primary me-2"></i>Model Info
+                            <i class="fas fa-robot text-primary me-2"></i>AI Models
                         </h5>
                     </div>
                     <div class="card-body">
-                        <div class="mb-3">
-                            <h6 class="fw-bold mb-1">RegNetY320</h6>
-                            <p class="text-muted small mb-0">Accuracy: 89.4%</p>
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <div>
+                                <h6 class="fw-bold mb-0">RegNetY320</h6>
+                                <small class="text-muted">Primary Model</small>
+                            </div>
+                            <span class="badge bg-success">89.4%</span>
                         </div>
-                        <div>
-                            <h6 class="fw-bold mb-1">VGG16</h6>
-                            <p class="text-muted small mb-0">Accuracy: 73.7%</p>
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div>
+                                <h6 class="fw-bold mb-0">VGG16</h6>
+                                <small class="text-muted">Secondary Model</small>
+                            </div>
+                            <span class="badge bg-secondary">73.7%</span>
                         </div>
-                        <hr class="my-3">
-                        <p class="text-muted small mb-0">
-                            <i class="fas fa-shield-alt text-success me-1"></i>
-                            Your images are securely stored
-                        </p>
                     </div>
                 </div>
+
+                <!-- Recent Uploads -->
+                <div class="card border-0 shadow-sm">
+                    <div class="card-header bg-white border-bottom">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <h5 class="fw-bold mb-0">
+                                <i class="fas fa-history text-primary me-2"></i>Recent Uploads
+                            </h5>
+                            <a href="{% url 'detection:history' %}" class="btn btn-sm btn-outline-primary">
+                                View All
+                            </a>
+                        </div>
+                    </div>
+                    <div class="card-body p-0">
+                        {% if recent_uploads %}
+                        <ul class="list-group list-group-flush">
+                            {% for image in recent_uploads %}
+                            <li class="list-group-item">
+                                <div class="d-flex align-items-center">
+                                    {% if image.file_url %}
+                                    <img src="{{ image.file_url }}" alt="Thumbnail" class="recent-thumbnail me-3">
+                                    {% elif image.file %}
+                                    <img src="{{ image.file.url }}" alt="Thumbnail" class="recent-thumbnail me-3">
+                                    {% else %}
+                                    <div class="recent-thumbnail me-3 bg-light d-flex align-items-center justify-content-center">
+                                        <i class="fas fa-image text-muted"></i>
+                                    </div>
+                                    {% endif %}
+                                    <div class="flex-grow-1 min-width-0">
+                                        <p class="mb-0 fw-medium text-truncate" style="max-width: 120px;">{{ image.filename }}</p>
+                                        <small class="text-muted">{{ image.upload_date|timesince }} ago</small>
+                                    </div>
+                                    <a href="{% url 'detection:results' image.id %}" class="btn btn-sm btn-outline-primary">
+                                        <i class="fas fa-eye"></i>
+                                    </a>
+                                </div>
+                            </li>
+                            {% endfor %}
+                        </ul>
+                        {% else %}
+                        <div class="text-center py-4">
+                            <i class="fas fa-inbox text-muted mb-2" style="font-size: 2rem;"></i>
+                            <p class="text-muted small mb-0">No uploads yet</p>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Camera Modal -->
+<div class="modal fade" id="cameraModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="fas fa-camera me-2"></i>Take Photo
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body text-center">
+                <video id="cameraPreview" class="w-100 rounded mb-3" autoplay playsinline></video>
+                <canvas id="cameraCanvas" class="d-none"></canvas>
+                <button type="button" class="btn btn-primary" onclick="capturePhoto()">
+                    <i class="fas fa-camera me-2"></i>Capture
+                </button>
             </div>
         </div>
     </div>
@@ -134,106 +509,270 @@ document.addEventListener('DOMContentLoaded', function() {
     const uploadZone = document.getElementById('uploadZone');
     const fileInput = document.getElementById('fileInput');
     const uploadPrompt = document.getElementById('uploadPrompt');
-    const previewSection = document.getElementById('previewSection');
-    const imagePreview = document.getElementById('imagePreview');
-    const fileName = document.getElementById('fileName');
-    const fileSize = document.getElementById('fileSize');
-    const uploadForm = document.getElementById('uploadForm');
-    const uploadProgress = document.getElementById('uploadProgress');
+    const fileQueue = document.getElementById('fileQueue');
+    const fileList = document.getElementById('fileList');
+    const fileCount = document.getElementById('fileCount');
+    const overallProgress = document.getElementById('overallProgress');
     const progressBar = document.getElementById('progressBar');
     const progressText = document.getElementById('progressText');
+    const progressStatus = document.getElementById('progressStatus');
+    const successState = document.getElementById('successState');
+
+    let selectedFiles = [];
 
     // Drag & Drop
     uploadZone.addEventListener('dragover', (e) => {
         e.preventDefault();
         uploadZone.classList.add('dragover');
+        uploadZone.classList.remove('pulse');
     });
 
     uploadZone.addEventListener('dragleave', () => {
         uploadZone.classList.remove('dragover');
+        uploadZone.classList.add('pulse');
     });
 
     uploadZone.addEventListener('drop', (e) => {
         e.preventDefault();
         uploadZone.classList.remove('dragover');
-        const files = e.dataTransfer.files;
-        if (files.length > 0) {
-            handleFile(files[0]);
-        }
+        const files = Array.from(e.dataTransfer.files);
+        addFilesToQueue(files);
     });
 
     fileInput.addEventListener('change', (e) => {
-        if (e.target.files.length > 0) {
-            handleFile(e.target.files[0]);
-        }
+        const files = Array.from(e.target.files);
+        addFilesToQueue(files);
     });
 
-    function handleFile(file) {
-        // Validate file
-        if (!window.OralCareAI.validateImageFile(file)) {
+    window.addFilesToQueue = function(files) {
+        files.forEach(file => {
+            // Validate file
+            if (!['image/jpeg', 'image/jpg', 'image/png'].includes(file.type)) {
+                window.OralCareAI.showToast(`${file.name}: Invalid file type`, 'danger');
+                return;
+            }
+            if (file.size > 10485760) {
+                window.OralCareAI.showToast(`${file.name}: File too large (max 10MB)`, 'danger');
+                return;
+            }
+
+            // Add to queue
+            selectedFiles.push(file);
+        });
+
+        updateFileQueue();
+    };
+
+    function updateFileQueue() {
+        if (selectedFiles.length === 0) {
+            fileQueue.classList.add('d-none');
+            uploadPrompt.classList.remove('d-none');
+            uploadZone.classList.add('pulse');
             return;
         }
 
-        // Show preview
-        const reader = new FileReader();
-        reader.onload = (e) => {
-            imagePreview.src = e.target.result;
-            fileName.textContent = file.name;
-            fileSize.textContent = window.OralCareAI.formatFileSize(file.size);
-            uploadPrompt.classList.add('d-none');
-            previewSection.classList.remove('d-none');
-        };
-        reader.readAsDataURL(file);
+        uploadPrompt.classList.add('d-none');
+        fileQueue.classList.remove('d-none');
+        uploadZone.classList.remove('pulse');
+        fileCount.textContent = selectedFiles.length;
+
+        fileList.innerHTML = '';
+        selectedFiles.forEach((file, index) => {
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                const item = document.createElement('div');
+                item.className = 'file-queue-item';
+                item.id = `file-${index}`;
+                item.innerHTML = `
+                    <div class="d-flex align-items-center">
+                        <img src="${e.target.result}" class="queue-thumbnail me-3" alt="Preview">
+                        <div class="flex-grow-1">
+                            <p class="mb-0 fw-medium">${file.name}</p>
+                            <small class="text-muted">${formatFileSize(file.size)}</small>
+                        </div>
+                        <button type="button" class="btn btn-sm btn-outline-danger" onclick="removeFile(${index})">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </div>
+                    <div class="progress mt-2 d-none" style="height: 4px;" id="progress-${index}">
+                        <div class="progress-bar" style="width: 0%"></div>
+                    </div>
+                `;
+                fileList.appendChild(item);
+            };
+            reader.readAsDataURL(file);
+        });
+
+        // Update step indicator
+        document.getElementById('step1').classList.add('completed');
+        document.getElementById('step1').querySelector('.step-circle').innerHTML = '<i class="fas fa-check"></i>';
     }
 
-    // Form submit
-    uploadForm.addEventListener('submit', async (e) => {
-        e.preventDefault();
+    window.removeFile = function(index) {
+        selectedFiles.splice(index, 1);
+        updateFileQueue();
+    };
 
-        const formData = new FormData(uploadForm);
+    window.clearAllFiles = function() {
+        selectedFiles = [];
+        fileInput.value = '';
+        updateFileQueue();
 
-        // Show progress
-        uploadProgress.classList.remove('d-none');
+        // Reset step indicator
+        document.getElementById('step1').classList.remove('completed');
+        document.getElementById('step1').classList.add('active');
+        document.getElementById('step1').querySelector('.step-circle').textContent = '1';
+    };
 
-        try {
+    window.uploadAllFiles = async function() {
+        if (selectedFiles.length === 0) return;
+
+        // Update UI
+        overallProgress.classList.remove('d-none');
+        document.getElementById('step2').classList.add('active');
+
+        let completed = 0;
+        let lastSuccessUrl = '';
+
+        for (let i = 0; i < selectedFiles.length; i++) {
+            const file = selectedFiles[i];
+            const item = document.getElementById(`file-${i}`);
+            const progress = document.getElementById(`progress-${i}`);
+
+            item.classList.add('uploading');
+            progress.classList.remove('d-none');
+
+            try {
+                const formData = new FormData();
+                formData.append('image', file);
+                formData.append('csrfmiddlewaretoken', '{{ csrf_token }}');
+
+                const response = await uploadFile(formData, (percent) => {
+                    progress.querySelector('.progress-bar').style.width = percent + '%';
+                });
+
+                if (response.success) {
+                    item.classList.remove('uploading');
+                    item.classList.add('success');
+                    item.querySelector('.btn-outline-danger').innerHTML = '<i class="fas fa-check text-success"></i>';
+                    lastSuccessUrl = response.redirect_url;
+                } else {
+                    throw new Error(response.error || 'Upload failed');
+                }
+            } catch (error) {
+                item.classList.remove('uploading');
+                item.classList.add('error');
+                item.querySelector('.btn-outline-danger').innerHTML = '<i class="fas fa-exclamation-triangle text-danger"></i>';
+            }
+
+            completed++;
+            const overallPercent = Math.round((completed / selectedFiles.length) * 100);
+            progressBar.style.width = overallPercent + '%';
+            progressText.textContent = overallPercent + '%';
+            progressStatus.textContent = `Uploading ${completed}/${selectedFiles.length}...`;
+        }
+
+        // Complete
+        document.getElementById('step2').classList.remove('active');
+        document.getElementById('step2').classList.add('completed');
+        document.getElementById('step2').querySelector('.step-circle').innerHTML = '<i class="fas fa-check"></i>';
+        document.getElementById('step3').classList.add('active');
+
+        progressStatus.textContent = 'Upload complete!';
+
+        // Show success state
+        setTimeout(() => {
+            uploadPrompt.classList.add('d-none');
+            fileQueue.classList.add('d-none');
+            successState.classList.remove('d-none');
+
+            // Redirect to results
+            setTimeout(() => {
+                if (lastSuccessUrl) {
+                    window.location.href = lastSuccessUrl;
+                }
+            }, 1500);
+        }, 500);
+    };
+
+    function uploadFile(formData, onProgress) {
+        return new Promise((resolve, reject) => {
             const xhr = new XMLHttpRequest();
 
             xhr.upload.addEventListener('progress', (e) => {
                 if (e.lengthComputable) {
-                    const percent = Math.round((e.loaded / e.total) * 100);
-                    progressBar.style.width = percent + '%';
-                    progressText.textContent = percent + '%';
+                    onProgress(Math.round((e.loaded / e.total) * 100));
                 }
             });
 
             xhr.addEventListener('load', () => {
                 if (xhr.status === 200) {
-                    const response = JSON.parse(xhr.responseText);
-                    window.OralCareAI.showToast('Image uploaded successfully!', 'success');
-                    setTimeout(() => {
-                        window.location.href = response.redirect_url;
-                    }, 1000);
+                    resolve(JSON.parse(xhr.responseText));
                 } else {
-                    window.OralCareAI.showToast('Upload failed. Please try again.', 'danger');
-                    uploadProgress.classList.add('d-none');
+                    reject(new Error('Upload failed'));
                 }
             });
 
-            xhr.open('POST', uploadForm.action);
-            xhr.setRequestHeader('X-CSRFToken', '{{ csrf_token }}');
-            xhr.send(formData);
+            xhr.addEventListener('error', () => reject(new Error('Network error')));
 
-        } catch (error) {
-            window.OralCareAI.showToast('Upload failed. Please try again.', 'danger');
-            uploadProgress.classList.add('d-none');
-        }
-    });
+            xhr.open('POST', '{% url "detection:upload" %}');
+            xhr.send(formData);
+        });
+    }
+
+    function formatFileSize(bytes) {
+        if (bytes === 0) return '0 Bytes';
+        const k = 1024;
+        const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+        const i = Math.floor(Math.log(bytes) / Math.log(k));
+        return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+    }
 });
 
-function clearUpload() {
-    document.getElementById('fileInput').value = '';
-    document.getElementById('uploadPrompt').classList.remove('d-none');
-    document.getElementById('previewSection').classList.add('d-none');
-}
+// Camera functions
+let cameraStream = null;
+
+window.openCamera = async function() {
+    try {
+        const modal = new bootstrap.Modal(document.getElementById('cameraModal'));
+        modal.show();
+
+        const video = document.getElementById('cameraPreview');
+        cameraStream = await navigator.mediaDevices.getUserMedia({
+            video: { facingMode: 'environment' }
+        });
+        video.srcObject = cameraStream;
+    } catch (error) {
+        window.OralCareAI.showToast('Camera access denied', 'danger');
+    }
+};
+
+window.capturePhoto = function() {
+    const video = document.getElementById('cameraPreview');
+    const canvas = document.getElementById('cameraCanvas');
+    const ctx = canvas.getContext('2d');
+
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+    ctx.drawImage(video, 0, 0);
+
+    canvas.toBlob((blob) => {
+        const file = new File([blob], `capture_${Date.now()}.jpg`, { type: 'image/jpeg' });
+        window.addFilesToQueue([file]);
+
+        // Close modal and stop camera
+        bootstrap.Modal.getInstance(document.getElementById('cameraModal')).hide();
+        if (cameraStream) {
+            cameraStream.getTracks().forEach(track => track.stop());
+        }
+    }, 'image/jpeg', 0.8);
+};
+
+// Stop camera when modal closes
+document.getElementById('cameraModal').addEventListener('hidden.bs.modal', () => {
+    if (cameraStream) {
+        cameraStream.getTracks().forEach(track => track.stop());
+    }
+});
 </script>
 {% endblock %}

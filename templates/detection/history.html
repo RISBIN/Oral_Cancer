@@ -3,9 +3,98 @@
 
 {% block title %}History - OralCare AI{% endblock %}
 
+{% block extra_css %}
+<style>
+    /* Thumbnail styles */
+    .history-thumbnail {
+        width: 60px;
+        height: 60px;
+        object-fit: cover;
+        border-radius: 8px;
+        cursor: pointer;
+        transition: transform 0.2s;
+    }
+
+    .history-thumbnail:hover {
+        transform: scale(1.1);
+    }
+
+    /* Grid view styles */
+    .grid-item {
+        transition: all 0.3s ease;
+    }
+
+    .grid-item:hover {
+        transform: translateY(-5px);
+    }
+
+    .grid-thumbnail {
+        width: 100%;
+        height: 150px;
+        object-fit: cover;
+        border-radius: 8px 8px 0 0;
+    }
+
+    /* Filter buttons */
+    .filter-btn {
+        border-radius: 20px;
+        padding: 6px 16px;
+        font-size: 0.85rem;
+    }
+
+    .filter-btn.active {
+        background: #4A90E2;
+        color: white;
+        border-color: #4A90E2;
+    }
+
+    /* View toggle */
+    .view-toggle .btn {
+        padding: 8px 12px;
+    }
+
+    .view-toggle .btn.active {
+        background: #4A90E2;
+        color: white;
+    }
+
+    /* Search box */
+    .search-box {
+        max-width: 300px;
+    }
+
+    /* Stats mini cards */
+    .stat-mini {
+        padding: 12px 16px;
+        border-radius: 8px;
+        background: white;
+        border: 1px solid #e9ecef;
+    }
+
+    /* Confidence bar */
+    .confidence-bar {
+        height: 4px;
+        border-radius: 2px;
+    }
+
+    /* Empty state */
+    .empty-state-icon {
+        width: 120px;
+        height: 120px;
+        background: #f8f9fa;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin: 0 auto 20px;
+    }
+</style>
+{% endblock %}
+
 {% block content %}
 <div class="bg-light min-vh-100 py-4">
     <div class="container-fluid px-4">
+        <!-- Header -->
         <div class="row mb-4">
             <div class="col">
                 <h2 class="fw-bold mb-1">Detection History</h2>
@@ -18,77 +107,204 @@
             </div>
         </div>
 
-        <div class="card border-0 shadow-sm">
+        <!-- Statistics Cards -->
+        <div class="row g-3 mb-4">
+            <div class="col-md-2 col-6">
+                <div class="stat-mini text-center">
+                    <h4 class="fw-bold text-primary mb-0">{{ total_images }}</h4>
+                    <small class="text-muted">Total Images</small>
+                </div>
+            </div>
+            <div class="col-md-2 col-6">
+                <div class="stat-mini text-center">
+                    <h4 class="fw-bold text-success mb-0">{{ processed_count }}</h4>
+                    <small class="text-muted">Processed</small>
+                </div>
+            </div>
+            <div class="col-md-2 col-6">
+                <div class="stat-mini text-center">
+                    <h4 class="fw-bold text-warning mb-0">{{ pending_count }}</h4>
+                    <small class="text-muted">Pending</small>
+                </div>
+            </div>
+            <div class="col-md-2 col-6">
+                <div class="stat-mini text-center">
+                    <h4 class="fw-bold text-danger mb-0">{{ cancer_count }}</h4>
+                    <small class="text-muted">Cancer Detected</small>
+                </div>
+            </div>
+            <div class="col-md-2 col-6">
+                <div class="stat-mini text-center">
+                    <h4 class="fw-bold text-info mb-0">{{ non_cancer_count }}</h4>
+                    <small class="text-muted">Non-Cancer</small>
+                </div>
+            </div>
+            <div class="col-md-2 col-6">
+                <div class="stat-mini text-center">
+                    {% if total_images > 0 %}
+                    <h4 class="fw-bold text-secondary mb-0">{{ cancer_count|divisibleby:total_images|default:"0" }}%</h4>
+                    {% else %}
+                    <h4 class="fw-bold text-secondary mb-0">0%</h4>
+                    {% endif %}
+                    <small class="text-muted">Detection Rate</small>
+                </div>
+            </div>
+        </div>
+
+        <!-- Filters and Search -->
+        <div class="card border-0 shadow-sm mb-4">
+            <div class="card-body py-3">
+                <div class="row align-items-center">
+                    <div class="col-md-6">
+                        <!-- Filter buttons -->
+                        <div class="d-flex flex-wrap gap-2">
+                            <button class="btn btn-outline-secondary filter-btn active" data-filter="all">
+                                All ({{ total_images }})
+                            </button>
+                            <button class="btn btn-outline-danger filter-btn" data-filter="cancer">
+                                <i class="fas fa-exclamation-circle me-1"></i>Cancer ({{ cancer_count }})
+                            </button>
+                            <button class="btn btn-outline-success filter-btn" data-filter="non-cancer">
+                                <i class="fas fa-check-circle me-1"></i>Non-Cancer ({{ non_cancer_count }})
+                            </button>
+                            <button class="btn btn-outline-warning filter-btn" data-filter="pending">
+                                <i class="fas fa-clock me-1"></i>Pending ({{ pending_count }})
+                            </button>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="d-flex justify-content-end align-items-center gap-3">
+                            <!-- Search -->
+                            <div class="search-box">
+                                <div class="input-group input-group-sm">
+                                    <span class="input-group-text bg-white">
+                                        <i class="fas fa-search text-muted"></i>
+                                    </span>
+                                    <input type="text" class="form-control" id="searchInput" placeholder="Search files...">
+                                </div>
+                            </div>
+                            <!-- View Toggle -->
+                            <div class="btn-group btn-group-sm view-toggle">
+                                <button class="btn btn-outline-secondary active" data-view="list" title="List View">
+                                    <i class="fas fa-list"></i>
+                                </button>
+                                <button class="btn btn-outline-secondary" data-view="grid" title="Grid View">
+                                    <i class="fas fa-th"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- List View -->
+        <div id="listView" class="card border-0 shadow-sm">
             <div class="card-body p-0">
                 {% if images %}
                 <div class="table-responsive">
-                    <table class="table table-hover mb-0">
+                    <table class="table table-hover mb-0" id="historyTable">
                         <thead>
                             <tr>
-                                <th style="width: 50px;"></th>
+                                <th style="width: 80px;">Preview</th>
                                 <th>Filename</th>
+                                <th>Prediction</th>
+                                <th>Confidence</th>
                                 <th>Size</th>
-                                <th>Status</th>
-                                <th>Upload Date</th>
-                                <th>Results</th>
+                                <th>Date</th>
                                 <th style="width: 150px;">Actions</th>
                             </tr>
                         </thead>
                         <tbody>
-                            {% for image in images %}
-                            <tr>
+                            {% for item in images %}
+                            <tr class="history-row"
+                                data-filename="{{ item.image.filename|lower }}"
+                                data-prediction="{% if item.primary_result %}{{ item.primary_result.prediction|lower }}{% else %}pending{% endif %}"
+                                data-status="{{ item.image.status }}">
                                 <td>
-                                    <i class="fas fa-image text-primary fs-4"></i>
-                                </td>
-                                <td>
-                                    <div class="fw-medium">{{ image.filename }}</div>
-                                </td>
-                                <td>
-                                    <span class="text-muted small">{{ image.file_size|filesizeformat }}</span>
-                                </td>
-                                <td>
-                                    {% if image.status == 'processed' %}
-                                    <span class="badge bg-success">
-                                        <i class="fas fa-check me-1"></i>Processed
-                                    </span>
-                                    {% elif image.status == 'processing' %}
-                                    <span class="badge bg-warning">
-                                        <i class="fas fa-spinner fa-spin me-1"></i>Processing
-                                    </span>
-                                    {% elif image.status == 'pending' %}
-                                    <span class="badge bg-secondary">
-                                        <i class="fas fa-clock me-1"></i>Pending
-                                    </span>
+                                    {% if item.image.file_url %}
+                                    <img src="{{ item.image.file_url }}" alt="Thumbnail" class="history-thumbnail"
+                                         onclick="showImageModal('{{ item.image.file_url }}', '{{ item.image.filename }}')">
+                                    {% elif item.image.file %}
+                                    <img src="{{ item.image.file.url }}" alt="Thumbnail" class="history-thumbnail"
+                                         onclick="showImageModal('{{ item.image.file.url }}', '{{ item.image.filename }}')">
                                     {% else %}
-                                    <span class="badge bg-danger">
-                                        <i class="fas fa-times me-1"></i>Failed
-                                    </span>
+                                    <div class="history-thumbnail bg-light d-flex align-items-center justify-content-center">
+                                        <i class="fas fa-image text-muted"></i>
+                                    </div>
                                     {% endif %}
+                                </td>
+                                <td>
+                                    <div class="fw-medium">{{ item.image.filename }}</div>
+                                    <small class="text-muted">ID: {{ item.image.id|truncatechars:8 }}</small>
+                                </td>
+                                <td>
+                                    {% if item.primary_result %}
+                                        {% if item.primary_result.prediction == 'Cancer' %}
+                                        <span class="badge bg-danger">
+                                            <i class="fas fa-exclamation-circle me-1"></i>Cancer
+                                        </span>
+                                        {% else %}
+                                        <span class="badge bg-success">
+                                            <i class="fas fa-check-circle me-1"></i>Non-Cancer
+                                        </span>
+                                        {% endif %}
+                                        <br>
+                                        <small class="text-muted">{{ item.primary_result.model_name }}</small>
+                                    {% else %}
+                                        {% if item.image.status == 'pending' %}
+                                        <span class="badge bg-warning">
+                                            <i class="fas fa-clock me-1"></i>Pending
+                                        </span>
+                                        {% elif item.image.status == 'processing' %}
+                                        <span class="badge bg-info">
+                                            <i class="fas fa-spinner fa-spin me-1"></i>Processing
+                                        </span>
+                                        {% else %}
+                                        <span class="badge bg-secondary">
+                                            <i class="fas fa-minus me-1"></i>No Results
+                                        </span>
+                                        {% endif %}
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if item.primary_result %}
+                                    <div class="d-flex align-items-center">
+                                        <div class="flex-grow-1 me-2" style="width: 60px;">
+                                            <div class="progress confidence-bar">
+                                                <div class="progress-bar {% if item.primary_result.confidence_score >= 0.8 %}bg-success{% elif item.primary_result.confidence_score >= 0.6 %}bg-warning{% else %}bg-danger{% endif %}"
+                                                     style="width: {{ item.primary_result.confidence_percentage }}%"></div>
+                                            </div>
+                                        </div>
+                                        <small class="fw-medium">{{ item.primary_result.confidence_percentage }}%</small>
+                                    </div>
+                                    {% else %}
+                                    <span class="text-muted">-</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <span class="text-muted small">{{ item.image.file_size|filesizeformat }}</span>
                                 </td>
                                 <td>
                                     <span class="text-muted small">
-                                        {{ image.upload_date|date:"M d, Y" }}<br>
-                                        {{ image.upload_date|time:"h:i A" }}
+                                        {{ item.image.upload_date|date:"M d, Y" }}<br>
+                                        {{ item.image.upload_date|time:"h:i A" }}
                                     </span>
-                                </td>
-                                <td>
-                                    {% if image.has_results %}
-                                    <span class="text-success">
-                                        <i class="fas fa-check-circle me-1"></i>Available
-                                    </span>
-                                    {% else %}
-                                    <span class="text-muted">
-                                        <i class="fas fa-minus-circle me-1"></i>No Results
-                                    </span>
-                                    {% endif %}
                                 </td>
                                 <td>
                                     <div class="btn-group btn-group-sm">
-                                        <a href="{% url 'detection:results' image.id %}" class="btn btn-primary" title="View Results">
+                                        {% if item.image.id %}
+                                        <a href="{% url 'detection:results' item.image.id %}" class="btn btn-primary" title="View Results">
                                             <i class="fas fa-eye"></i>
                                         </a>
-                                        {% if image.file %}
-                                        <a href="{{ image.file.url }}" target="_blank" class="btn btn-outline-primary" title="Download">
+                                        {% endif %}
+                                        {% if item.primary_result and item.primary_result.id %}
+                                        <a href="{% url 'reports:generate' item.primary_result.id %}" class="btn btn-outline-primary" title="Generate Report">
+                                            <i class="fas fa-file-pdf"></i>
+                                        </a>
+                                        {% endif %}
+                                        {% if item.image.file %}
+                                        <a href="{{ item.image.file.url }}" target="_blank" class="btn btn-outline-secondary" title="Download">
                                             <i class="fas fa-download"></i>
                                         </a>
                                         {% endif %}
@@ -101,7 +317,9 @@
                 </div>
                 {% else %}
                 <div class="text-center py-5">
-                    <i class="fas fa-inbox text-muted mb-3" style="font-size: 4rem;"></i>
+                    <div class="empty-state-icon">
+                        <i class="fas fa-inbox text-muted" style="font-size: 3rem;"></i>
+                    </div>
                     <h5 class="fw-bold mb-2">No Images Yet</h5>
                     <p class="text-muted mb-4">Upload your first image to get started with oral cancer detection.</p>
                     <a href="{% url 'detection:upload' %}" class="btn btn-primary">
@@ -111,6 +329,177 @@
                 {% endif %}
             </div>
         </div>
+
+        <!-- Grid View (Hidden by default) -->
+        <div id="gridView" class="d-none">
+            {% if images %}
+            <div class="row g-4" id="gridContainer">
+                {% for item in images %}
+                <div class="col-md-3 col-sm-6 grid-item"
+                     data-filename="{{ item.image.filename|lower }}"
+                     data-prediction="{% if item.primary_result %}{{ item.primary_result.prediction|lower }}{% else %}pending{% endif %}"
+                     data-status="{{ item.image.status }}">
+                    <div class="card border-0 shadow-sm h-100">
+                        {% if item.image.file_url %}
+                        <img src="{{ item.image.file_url }}" alt="Thumbnail" class="grid-thumbnail"
+                             onclick="showImageModal('{{ item.image.file_url }}', '{{ item.image.filename }}')">
+                        {% elif item.image.file %}
+                        <img src="{{ item.image.file.url }}" alt="Thumbnail" class="grid-thumbnail"
+                             onclick="showImageModal('{{ item.image.file.url }}', '{{ item.image.filename }}')">
+                        {% else %}
+                        <div class="grid-thumbnail bg-light d-flex align-items-center justify-content-center">
+                            <i class="fas fa-image text-muted fa-3x"></i>
+                        </div>
+                        {% endif %}
+                        <div class="card-body">
+                            <h6 class="fw-bold mb-2 text-truncate" title="{{ item.image.filename }}">{{ item.image.filename }}</h6>
+                            {% if item.primary_result %}
+                                {% if item.primary_result.prediction == 'Cancer' %}
+                                <span class="badge bg-danger mb-2">
+                                    <i class="fas fa-exclamation-circle me-1"></i>Cancer
+                                </span>
+                                {% else %}
+                                <span class="badge bg-success mb-2">
+                                    <i class="fas fa-check-circle me-1"></i>Non-Cancer
+                                </span>
+                                {% endif %}
+                                <div class="d-flex align-items-center mb-2">
+                                    <div class="progress confidence-bar flex-grow-1 me-2">
+                                        <div class="progress-bar {% if item.primary_result.confidence_score >= 0.8 %}bg-success{% elif item.primary_result.confidence_score >= 0.6 %}bg-warning{% else %}bg-danger{% endif %}"
+                                             style="width: {{ item.primary_result.confidence_percentage }}%"></div>
+                                    </div>
+                                    <small class="fw-medium">{{ item.primary_result.confidence_percentage }}%</small>
+                                </div>
+                            {% else %}
+                                <span class="badge bg-warning mb-2">
+                                    <i class="fas fa-clock me-1"></i>Pending
+                                </span>
+                            {% endif %}
+                            <small class="text-muted d-block">{{ item.image.upload_date|date:"M d, Y" }}</small>
+                        </div>
+                        <div class="card-footer bg-white border-0 pt-0">
+                            <div class="d-flex gap-2">
+                                {% if item.image.id %}
+                                <a href="{% url 'detection:results' item.image.id %}" class="btn btn-sm btn-primary flex-grow-1">
+                                    <i class="fas fa-eye me-1"></i>View
+                                </a>
+                                {% endif %}
+                                {% if item.primary_result and item.primary_result.id %}
+                                <a href="{% url 'reports:generate' item.primary_result.id %}" class="btn btn-sm btn-outline-primary" title="Report">
+                                    <i class="fas fa-file-pdf"></i>
+                                </a>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            {% endif %}
+        </div>
     </div>
 </div>
+
+<!-- Image Preview Modal -->
+<div class="modal fade" id="imageModal" tabindex="-1">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="imageModalTitle">Image Preview</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body text-center p-0">
+                <img id="modalImage" class="img-fluid" alt="Preview">
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const searchInput = document.getElementById('searchInput');
+    const filterBtns = document.querySelectorAll('.filter-btn');
+    const viewBtns = document.querySelectorAll('.view-toggle .btn');
+    const listView = document.getElementById('listView');
+    const gridView = document.getElementById('gridView');
+
+    let currentFilter = 'all';
+    let currentSearch = '';
+
+    // Filter functionality
+    filterBtns.forEach(btn => {
+        btn.addEventListener('click', () => {
+            filterBtns.forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            currentFilter = btn.dataset.filter;
+            applyFilters();
+        });
+    });
+
+    // Search functionality
+    searchInput.addEventListener('input', (e) => {
+        currentSearch = e.target.value.toLowerCase();
+        applyFilters();
+    });
+
+    // View toggle
+    viewBtns.forEach(btn => {
+        btn.addEventListener('click', () => {
+            viewBtns.forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+
+            if (btn.dataset.view === 'grid') {
+                listView.classList.add('d-none');
+                gridView.classList.remove('d-none');
+            } else {
+                gridView.classList.add('d-none');
+                listView.classList.remove('d-none');
+            }
+        });
+    });
+
+    function applyFilters() {
+        // Filter list view
+        document.querySelectorAll('.history-row').forEach(row => {
+            const filename = row.dataset.filename;
+            const prediction = row.dataset.prediction;
+            const status = row.dataset.status;
+
+            let showByFilter = currentFilter === 'all' ||
+                (currentFilter === 'cancer' && prediction === 'cancer') ||
+                (currentFilter === 'non-cancer' && prediction === 'non-cancer') ||
+                (currentFilter === 'pending' && status === 'pending');
+
+            let showBySearch = currentSearch === '' || filename.includes(currentSearch);
+
+            row.style.display = (showByFilter && showBySearch) ? '' : 'none';
+        });
+
+        // Filter grid view
+        document.querySelectorAll('.grid-item').forEach(item => {
+            const filename = item.dataset.filename;
+            const prediction = item.dataset.prediction;
+            const status = item.dataset.status;
+
+            let showByFilter = currentFilter === 'all' ||
+                (currentFilter === 'cancer' && prediction === 'cancer') ||
+                (currentFilter === 'non-cancer' && prediction === 'non-cancer') ||
+                (currentFilter === 'pending' && status === 'pending');
+
+            let showBySearch = currentSearch === '' || filename.includes(currentSearch);
+
+            item.style.display = (showByFilter && showBySearch) ? '' : 'none';
+        });
+    }
+});
+
+// Image modal
+function showImageModal(src, title) {
+    document.getElementById('modalImage').src = src;
+    document.getElementById('imageModalTitle').textContent = title;
+    new bootstrap.Modal(document.getElementById('imageModal')).show();
+}
+</script>
 {% endblock %}

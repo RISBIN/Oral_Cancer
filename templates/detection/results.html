@@ -3,15 +3,10 @@
 
 {% block title %}Detection Results - OralCare AI{% endblock %}
 
-{% block content %}
+{% block extra_css %}
 <style>
-    body {
-        background: #f8f9fa;
-        font-family: 'Inter', 'Segoe UI', system-ui, -apple-system, sans-serif;
-    }
-
     .results-wrapper {
-        background: #ffffff;
+        background: #f8f9fa;
         min-height: 100vh;
     }
 
@@ -29,256 +24,434 @@
         box-shadow: 0 2px 8px rgba(0,0,0,0.06);
         margin-bottom: 20px;
         overflow: hidden;
+        transition: transform 0.3s ease;
+    }
+
+    .medical-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(0,0,0,0.1);
     }
 
     .card-header-custom {
         background: #ffffff;
         border-bottom: 2px solid #4A90E2;
-        padding: 20px 25px;
+        padding: 16px 20px;
     }
 
     .card-title {
         color: #2C3E50;
-        font-size: 1.1rem;
+        font-size: 1rem;
         font-weight: 600;
         margin: 0;
     }
 
     .image-container {
         background: #f8f9fa;
-        padding: 30px;
+        padding: 20px;
         text-align: center;
-        border-radius: 8px;
-        margin: 20px;
+        position: relative;
     }
 
     .preview-image {
-        max-height: 300px;
+        max-height: 280px;
         max-width: 100%;
         border-radius: 8px;
         box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        cursor: pointer;
+        transition: transform 0.3s ease;
     }
 
-    .stat-box {
-        background: #f8f9fa;
-        border-left: 4px solid #4A90E2;
-        padding: 15px;
-        border-radius: 6px;
-        margin-bottom: 15px;
+    .preview-image:hover {
+        transform: scale(1.02);
     }
 
-    .stat-label {
-        font-size: 0.75rem;
-        color: #6c757d;
-        text-transform: uppercase;
-        letter-spacing: 0.5px;
-        margin-bottom: 5px;
-    }
-
-    .stat-value {
-        font-size: 1.1rem;
-        color: #2C3E50;
-        font-weight: 600;
-    }
-
-    /* Prediction Badge */
-    .prediction-card {
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    .image-overlay {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        background: rgba(0,0,0,0.7);
         color: white;
+        padding: 10px 20px;
+        border-radius: 8px;
+        opacity: 0;
+        transition: opacity 0.3s ease;
+        pointer-events: none;
+    }
+
+    .image-container:hover .image-overlay {
+        opacity: 1;
+    }
+
+    /* Prediction Banner */
+    .prediction-banner {
         padding: 30px;
         text-align: center;
         border-radius: 12px;
-        margin: 20px;
+        margin-bottom: 20px;
+        position: relative;
+        overflow: hidden;
     }
 
-    .prediction-card.cancer {
-        background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+    .prediction-banner.cancer {
+        background: linear-gradient(135deg, #ff6b6b 0%, #ee5a5a 100%);
+        color: white;
     }
 
-    .prediction-card.normal {
-        background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+    .prediction-banner.normal {
+        background: linear-gradient(135deg, #51cf66 0%, #40c057 100%);
+        color: white;
+    }
+
+    .prediction-banner::before {
+        content: '';
+        position: absolute;
+        top: -50%;
+        left: -50%;
+        width: 200%;
+        height: 200%;
+        background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 60%);
+        animation: shimmer 3s infinite;
+    }
+
+    @keyframes shimmer {
+        0%, 100% { transform: rotate(0deg); }
+        50% { transform: rotate(180deg); }
+    }
+
+    .prediction-icon {
+        font-size: 3rem;
+        margin-bottom: 15px;
+        animation: pulse 2s infinite;
+    }
+
+    @keyframes pulse {
+        0%, 100% { transform: scale(1); }
+        50% { transform: scale(1.1); }
     }
 
     .prediction-title {
         font-size: 1.8rem;
         font-weight: 700;
-        margin-bottom: 10px;
+        margin-bottom: 8px;
     }
 
     .prediction-subtitle {
-        font-size: 1rem;
+        font-size: 0.95rem;
         opacity: 0.9;
     }
 
-    /* Confidence Meter */
-    .confidence-container {
-        text-align: center;
-        padding: 30px;
+    /* Model Agreement */
+    .agreement-badge {
+        display: inline-flex;
+        align-items: center;
+        padding: 8px 16px;
+        border-radius: 20px;
+        font-size: 0.85rem;
+        font-weight: 600;
+        margin-top: 15px;
     }
 
-    .confidence-meter {
-        width: 200px;
-        height: 200px;
+    .agreement-badge.agree {
+        background: rgba(255,255,255,0.2);
+        color: white;
+    }
+
+    .agreement-badge.disagree {
+        background: rgba(255,255,255,0.2);
+        color: white;
+    }
+
+    /* Confidence Gauge */
+    .gauge-container {
+        padding: 30px;
+        text-align: center;
+    }
+
+    .gauge {
+        width: 180px;
+        height: 180px;
         margin: 0 auto 20px;
         position: relative;
     }
 
-    .confidence-svg {
+    .gauge-svg {
         transform: rotate(-90deg);
     }
 
-    .confidence-bg {
+    .gauge-bg {
         fill: none;
         stroke: #e9ecef;
-        stroke-width: 15;
+        stroke-width: 12;
     }
 
-    .confidence-fill {
+    .gauge-fill {
         fill: none;
-        stroke: #4A90E2;
-        stroke-width: 15;
+        stroke-width: 12;
         stroke-linecap: round;
-        transition: stroke-dashoffset 1s ease;
+        transition: stroke-dashoffset 1.5s ease;
     }
 
-    .confidence-fill.high {
-        stroke: #28a745;
-    }
+    .gauge-fill.high { stroke: #40c057; }
+    .gauge-fill.medium { stroke: #fab005; }
+    .gauge-fill.low { stroke: #fa5252; }
 
-    .confidence-fill.medium {
-        stroke: #ffc107;
-    }
-
-    .confidence-fill.low {
-        stroke: #dc3545;
-    }
-
-    .confidence-number {
+    .gauge-value {
         position: absolute;
         top: 50%;
         left: 50%;
         transform: translate(-50%, -50%);
-        font-size: 2.5rem;
-        font-weight: 700;
-        color: #2C3E50;
+        text-align: center;
     }
 
-    .confidence-label {
-        font-size: 0.9rem;
+    .gauge-number {
+        font-size: 2.2rem;
+        font-weight: 700;
+        color: #2C3E50;
+        line-height: 1;
+    }
+
+    .gauge-label {
+        font-size: 0.75rem;
         color: #6c757d;
         text-transform: uppercase;
         letter-spacing: 1px;
     }
 
-    /* Comparison Chart */
-    .comparison-chart {
-        padding: 30px;
+    /* Model Comparison */
+    .model-comparison {
+        padding: 20px;
     }
 
-    .model-bar {
-        margin-bottom: 25px;
+    .model-item {
+        background: #f8f9fa;
+        border-radius: 10px;
+        padding: 15px;
+        margin-bottom: 12px;
+    }
+
+    .model-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 10px;
     }
 
     .model-name {
         font-weight: 600;
         color: #2C3E50;
-        margin-bottom: 8px;
-        font-size: 0.95rem;
-    }
-
-    .bar-container {
-        background: #e9ecef;
-        border-radius: 20px;
-        height: 40px;
-        position: relative;
-        overflow: hidden;
-    }
-
-    .bar-fill {
-        background: linear-gradient(90deg, #4A90E2 0%, #667eea 100%);
-        height: 100%;
-        border-radius: 20px;
-        transition: width 1.5s ease;
-        display: flex;
-        align-items: center;
-        justify-content: flex-end;
-        padding-right: 15px;
-        color: white;
-        font-weight: 600;
         font-size: 0.9rem;
     }
 
-    .bar-fill.regnet {
-        background: linear-gradient(90deg, #f093fb 0%, #f5576c 100%);
+    .model-badge {
+        font-size: 0.75rem;
+        padding: 4px 10px;
+        border-radius: 12px;
     }
 
-    .bar-fill.vgg16 {
-        background: linear-gradient(90deg, #4facfe 0%, #00f2fe 100%);
+    .progress-bar-custom {
+        height: 8px;
+        border-radius: 4px;
+        background: #e9ecef;
+        overflow: hidden;
     }
 
-    /* Metrics Grid */
-    .metrics-grid {
+    .progress-fill {
+        height: 100%;
+        border-radius: 4px;
+        transition: width 1.5s ease;
+    }
+
+    .progress-fill.regnet {
+        background: linear-gradient(90deg, #f06595 0%, #e64980 100%);
+    }
+
+    .progress-fill.vgg16 {
+        background: linear-gradient(90deg, #4dabf7 0%, #339af0 100%);
+    }
+
+    /* Quick Stats */
+    .quick-stats {
         display: grid;
         grid-template-columns: repeat(2, 1fr);
-        gap: 15px;
-        padding: 20px;
+        gap: 12px;
+        padding: 15px;
     }
 
-    .metric-item {
+    .stat-item {
         background: #f8f9fa;
-        padding: 20px;
+        padding: 12px;
         border-radius: 8px;
-        border-left: 3px solid #4A90E2;
         text-align: center;
     }
 
-    .metric-icon {
-        font-size: 2rem;
+    .stat-icon {
+        font-size: 1.2rem;
         color: #4A90E2;
-        margin-bottom: 10px;
-    }
-
-    .metric-value {
-        font-size: 1.5rem;
-        font-weight: 700;
-        color: #2C3E50;
         margin-bottom: 5px;
     }
 
-    .metric-label {
-        font-size: 0.8rem;
-        color: #6c757d;
-        text-transform: uppercase;
-        letter-spacing: 0.5px;
+    .stat-value {
+        font-size: 1rem;
+        font-weight: 700;
+        color: #2C3E50;
     }
 
-    /* Action Button */
-    .action-btn {
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        color: white;
+    .stat-label {
+        font-size: 0.7rem;
+        color: #6c757d;
+        text-transform: uppercase;
+    }
+
+    /* Recommendation Card */
+    .recommendation-card {
+        background: linear-gradient(135deg, #e3f2fd 0%, #f3e5f5 100%);
         border: none;
-        padding: 15px 30px;
+    }
+
+    .recommendation-list {
+        list-style: none;
+        padding: 0;
+        margin: 0;
+    }
+
+    .recommendation-list li {
+        padding: 10px 0;
+        border-bottom: 1px solid rgba(0,0,0,0.05);
+        display: flex;
+        align-items: start;
+    }
+
+    .recommendation-list li:last-child {
+        border-bottom: none;
+    }
+
+    .recommendation-list li i {
+        margin-right: 10px;
+        margin-top: 3px;
+    }
+
+    /* Action Buttons */
+    .action-buttons {
+        display: flex;
+        gap: 10px;
+        flex-wrap: wrap;
+        justify-content: center;
+        margin-top: 20px;
+    }
+
+    .action-btn {
+        padding: 12px 24px;
         border-radius: 8px;
         font-weight: 600;
-        font-size: 1rem;
+        font-size: 0.9rem;
         transition: all 0.3s ease;
+        border: none;
+        display: inline-flex;
+        align-items: center;
+    }
+
+    .action-btn-primary {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
         box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
     }
 
-    .action-btn:hover {
+    .action-btn-primary:hover {
         transform: translateY(-2px);
         box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
         color: white;
     }
 
+    .action-btn-secondary {
+        background: #ffffff;
+        color: #2C3E50;
+        border: 1px solid #e9ecef;
+    }
+
+    .action-btn-secondary:hover {
+        background: #f8f9fa;
+        color: #2C3E50;
+    }
+
+    /* Disclaimer */
+    .disclaimer-box {
+        background: #fff3cd;
+        border-left: 4px solid #ffc107;
+        padding: 15px;
+        border-radius: 0 8px 8px 0;
+        margin-top: 20px;
+    }
+
+    .disclaimer-box small {
+        color: #856404;
+    }
+
+    /* Loading State */
+    .loading-overlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgba(255,255,255,0.95);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 9999;
+    }
+
+    .loading-content {
+        text-align: center;
+    }
+
+    .loading-spinner {
+        width: 80px;
+        height: 80px;
+        border: 4px solid #e9ecef;
+        border-top: 4px solid #4A90E2;
+        border-radius: 50%;
+        animation: spin 1s linear infinite;
+        margin: 0 auto 20px;
+    }
+
+    @keyframes spin {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
+    }
+
+    /* Image Modal */
+    .image-modal-content {
+        max-width: 90vw;
+        max-height: 90vh;
+    }
+
     @media (max-width: 768px) {
-        .metrics-grid {
+        .quick-stats {
             grid-template-columns: 1fr;
+        }
+        .action-buttons {
+            flex-direction: column;
+        }
+        .action-btn {
+            width: 100%;
+            justify-content: center;
         }
     }
 </style>
+{% endblock %}
 
+{% block content %}
 <div class="results-wrapper">
+    <!-- Loading Overlay (hidden by default) -->
+    <div class="loading-overlay d-none" id="loadingOverlay">
+        <div class="loading-content">
+            <div class="loading-spinner"></div>
+            <h5 class="fw-bold">Analyzing Image...</h5>
+            <p class="text-muted">Running AI models (5-10 seconds)</p>
+        </div>
+    </div>
+
     <!-- Top Bar -->
     <div class="top-bar">
         <div class="container">
@@ -289,9 +462,9 @@
                     </a>
                 </div>
                 <div>
-                    <h4 class="mb-0 fw-bold text-muted" style="color: #2C3E50;">
-                        <i class="fas fa-file-medical me-2" style="color: #4A90E2;"></i>Detection Report
-                    </h4>
+                    <h5 class="mb-0 fw-bold" style="color: #2C3E50;">
+                        <i class="fas fa-file-medical me-2" style="color: #4A90E2;"></i>Detection Results
+                    </h5>
                 </div>
                 <div>
                     <span class="badge bg-light text-muted">{{ image.upload_date|date:"M d, Y" }}</span>
@@ -303,7 +476,7 @@
     <div class="container py-4">
         {% if detection_results %}
         <div class="row g-4">
-            <!-- Left Column: Image & Info -->
+            <!-- Left Column -->
             <div class="col-lg-5">
                 <!-- Image Card -->
                 <div class="medical-card">
@@ -312,143 +485,213 @@
                             <i class="fas fa-image me-2"></i>Medical Image
                         </h6>
                     </div>
-                    <div class="image-container">
+                    <div class="image-container" onclick="showImageModal()">
                         {% if image.file %}
-                        <img src="{{ image.file.url }}" alt="{{ image.filename }}" class="preview-image">
+                        <img src="{{ image.file.url }}" alt="{{ image.filename }}" class="preview-image" id="mainImage">
                         {% elif image.file_url %}
-                        <img src="{{ image.file_url }}" alt="{{ image.filename }}" class="preview-image">
+                        <img src="{{ image.file_url }}" alt="{{ image.filename }}" class="preview-image" id="mainImage">
                         {% endif %}
+                        <div class="image-overlay">
+                            <i class="fas fa-search-plus me-2"></i>Click to zoom
+                        </div>
                     </div>
                 </div>
 
-                <!-- Image Details Card -->
+                <!-- Quick Stats -->
                 <div class="medical-card">
                     <div class="card-header-custom">
                         <h6 class="card-title">
                             <i class="fas fa-info-circle me-2"></i>Image Details
                         </h6>
                     </div>
-                    <div class="p-3">
-                        <div class="stat-box">
+                    <div class="quick-stats">
+                        <div class="stat-item">
+                            <div class="stat-icon"><i class="fas fa-file"></i></div>
+                            <div class="stat-value text-truncate" style="font-size: 0.8rem;">{{ image.filename }}</div>
                             <div class="stat-label">Filename</div>
-                            <div class="stat-value">{{ image.filename }}</div>
                         </div>
-                        <div class="stat-box">
-                            <div class="stat-label">File Size</div>
+                        <div class="stat-item">
+                            <div class="stat-icon"><i class="fas fa-hdd"></i></div>
                             <div class="stat-value">{{ image.file_size|filesizeformat }}</div>
+                            <div class="stat-label">Size</div>
                         </div>
-                        <div class="stat-box">
-                            <div class="stat-label">Upload Date</div>
-                            <div class="stat-value">{{ image.upload_date|date:"M d, Y h:i A" }}</div>
+                        <div class="stat-item">
+                            <div class="stat-icon"><i class="fas fa-calendar"></i></div>
+                            <div class="stat-value">{{ image.upload_date|date:"M d" }}</div>
+                            <div class="stat-label">Date</div>
                         </div>
-                        <div class="stat-box">
-                            <div class="stat-label">Status</div>
-                            <div class="stat-value">
-                                <span class="badge bg-success">Analyzed</span>
-                            </div>
+                        <div class="stat-item">
+                            <div class="stat-icon"><i class="fas fa-clock"></i></div>
+                            <div class="stat-value">{{ image.upload_date|time:"h:i A" }}</div>
+                            <div class="stat-label">Time</div>
                         </div>
                     </div>
+                </div>
+
+                <!-- Disclaimer -->
+                <div class="disclaimer-box">
+                    <small>
+                        <i class="fas fa-exclamation-triangle me-2"></i>
+                        <strong>Medical Disclaimer:</strong> This AI analysis is for research purposes only and should not replace professional medical diagnosis. Always consult a qualified healthcare provider.
+                    </small>
                 </div>
             </div>
 
-            <!-- Right Column: Results -->
+            <!-- Right Column -->
             <div class="col-lg-7">
-                {% for result in detection_results %}
-                {% if forloop.first %}
-                <!-- Primary Prediction Card -->
-                <div class="prediction-card {% if result.prediction == 'Cancer' %}cancer{% else %}normal{% endif %}">
-                    <div class="prediction-title">
-                        {% if result.prediction == 'Cancer' %}
-                        <i class="fas fa-exclamation-triangle me-2"></i>Cancer Detected
+                {% with primary=detection_results.0 %}
+                <!-- Primary Prediction -->
+                <div class="prediction-banner {% if primary.prediction == 'Cancer' %}cancer{% else %}normal{% endif %}">
+                    <div class="prediction-icon">
+                        {% if primary.prediction == 'Cancer' %}
+                        <i class="fas fa-exclamation-triangle"></i>
                         {% else %}
-                        <i class="fas fa-check-circle me-2"></i>No Cancer Detected
+                        <i class="fas fa-check-circle"></i>
                         {% endif %}
                     </div>
-                    <div class="prediction-subtitle">Primary Model: {{ result.model_name }}</div>
+                    <div class="prediction-title">
+                        {% if primary.prediction == 'Cancer' %}
+                        Cancer Detected
+                        {% else %}
+                        No Cancer Detected
+                        {% endif %}
+                    </div>
+                    <div class="prediction-subtitle">
+                        Primary Model: {{ primary.model_name }} ({{ primary.confidence_percentage|floatformat:1 }}% confidence)
+                    </div>
+
+                    <!-- Model Agreement -->
+                    {% if detection_results|length > 1 %}
+                    {% with second=detection_results.1 %}
+                    <div class="agreement-badge {% if primary.prediction == second.prediction %}agree{% else %}disagree{% endif %}">
+                        {% if primary.prediction == second.prediction %}
+                        <i class="fas fa-check-circle me-2"></i>Both models agree
+                        {% else %}
+                        <i class="fas fa-exclamation-circle me-2"></i>Models disagree
+                        {% endif %}
+                    </div>
+                    {% endwith %}
+                    {% endif %}
                 </div>
 
-                <!-- Confidence Meter Card -->
+                <!-- Confidence Gauge -->
                 <div class="medical-card">
                     <div class="card-header-custom">
                         <h6 class="card-title">
                             <i class="fas fa-chart-pie me-2"></i>Confidence Analysis
                         </h6>
                     </div>
-                    <div class="confidence-container">
-                        <div class="confidence-meter">
-                            <svg class="confidence-svg" width="200" height="200">
-                                <circle class="confidence-bg" cx="100" cy="100" r="85"></circle>
-                                <circle class="confidence-fill {% if result.confidence_percentage >= 90 %}high{% elif result.confidence_percentage >= 70 %}medium{% else %}low{% endif %}"
-                                        cx="100" cy="100" r="85"
-                                        stroke-dasharray="{{ result.confidence_percentage|floatformat:0 }} 100"
-                                        style="stroke-dasharray: calc({{ result.confidence_percentage }} * 534.07 / 100) 534.07;">
+                    <div class="gauge-container">
+                        <div class="gauge">
+                            <svg class="gauge-svg" width="180" height="180">
+                                <circle class="gauge-bg" cx="90" cy="90" r="75"></circle>
+                                <circle class="gauge-fill {% if primary.confidence_percentage >= 80 %}high{% elif primary.confidence_percentage >= 60 %}medium{% else %}low{% endif %}"
+                                        cx="90" cy="90" r="75"
+                                        stroke-dasharray="471.24"
+                                        stroke-dashoffset="{{ 471.24|add:'-'|add:primary.confidence_percentage|stringformat:'f'|slice:':1' }}{% widthratio primary.confidence_percentage 100 471.24 as offset %}{{ offset|floatformat:0 }}"
+                                        style="stroke-dashoffset: calc(471.24 - ({{ primary.confidence_percentage }} * 471.24 / 100));">
                                 </circle>
                             </svg>
-                            <div class="confidence-number">{{ result.confidence_percentage|floatformat:1 }}%</div>
+                            <div class="gauge-value">
+                                <div class="gauge-number">{{ primary.confidence_percentage|floatformat:1 }}%</div>
+                                <div class="gauge-label">Confidence</div>
+                            </div>
                         </div>
-                        <div class="confidence-label">Detection Confidence</div>
+                        <div class="text-center">
+                            {% if primary.confidence_percentage >= 80 %}
+                            <span class="badge bg-success">High Confidence</span>
+                            {% elif primary.confidence_percentage >= 60 %}
+                            <span class="badge bg-warning">Medium Confidence</span>
+                            {% else %}
+                            <span class="badge bg-danger">Low Confidence</span>
+                            {% endif %}
+                        </div>
                     </div>
                 </div>
-                {% endif %}
-                {% endfor %}
+                {% endwith %}
 
-                <!-- Model Comparison Chart -->
+                <!-- Model Comparison -->
                 <div class="medical-card">
                     <div class="card-header-custom">
                         <h6 class="card-title">
                             <i class="fas fa-chart-bar me-2"></i>Model Comparison
                         </h6>
                     </div>
-                    <div class="comparison-chart">
+                    <div class="model-comparison">
                         {% for result in detection_results %}
-                        <div class="model-bar">
-                            <div class="model-name">
-                                <i class="fas fa-microchip me-2"></i>{{ result.model_name }} Model
-                                <span class="float-end text-muted">{{ result.prediction }}</span>
+                        <div class="model-item">
+                            <div class="model-header">
+                                <span class="model-name">
+                                    <i class="fas fa-microchip me-2"></i>{{ result.model_name }}
+                                </span>
+                                <span class="model-badge {% if result.prediction == 'Cancer' %}bg-danger{% else %}bg-success{% endif %} text-white">
+                                    {{ result.prediction }}
+                                </span>
                             </div>
-                            <div class="bar-container">
-                                <div class="bar-fill {% if result.model_name == 'RegNetY320' %}regnet{% else %}vgg16{% endif %}"
+                            <div class="progress-bar-custom">
+                                <div class="progress-fill {% if result.model_name == 'RegNetY320' %}regnet{% else %}vgg16{% endif %}"
                                      style="width: {{ result.confidence_percentage }}%;">
-                                    {{ result.confidence_percentage|floatformat:1 }}%
                                 </div>
                             </div>
+                            <div class="d-flex justify-content-between mt-2">
+                                <small class="text-muted">{{ result.confidence_percentage|floatformat:1 }}% confidence</small>
+                                <small class="text-muted">{{ result.processing_time|floatformat:2 }}s</small>
+                            </div>
                         </div>
                         {% endfor %}
                     </div>
                 </div>
 
-                <!-- Metrics Grid -->
-                <div class="medical-card">
+                <!-- Recommendations -->
+                <div class="medical-card recommendation-card">
                     <div class="card-header-custom">
                         <h6 class="card-title">
-                            <i class="fas fa-tachometer-alt me-2"></i>Performance Metrics
+                            <i class="fas fa-clipboard-list me-2"></i>Recommendations
                         </h6>
                     </div>
-                    <div class="metrics-grid">
-                        {% for result in detection_results %}
-                        <div class="metric-item">
-                            <div class="metric-icon"><i class="fas fa-clock"></i></div>
-                            <div class="metric-value">{{ result.processing_time|floatformat:2 }}s</div>
-                            <div class="metric-label">{{ result.model_name }} Time</div>
-                        </div>
-                        {% endfor %}
-                        <div class="metric-item">
-                            <div class="metric-icon"><i class="fas fa-calendar"></i></div>
-                            <div class="metric-value">{{ detection_results.0.created_at|date:"M d" }}</div>
-                            <div class="metric-label">Analysis Date</div>
-                        </div>
-                        <div class="metric-item">
-                            <div class="metric-icon"><i class="fas fa-code-branch"></i></div>
-                            <div class="metric-value">{{ detection_results.0.model_version }}</div>
-                            <div class="metric-label">Model Version</div>
-                        </div>
+                    <div class="p-3">
+                        <ul class="recommendation-list">
+                            {% if detection_results.0.prediction == 'Cancer' %}
+                            <li>
+                                <i class="fas fa-user-md text-primary"></i>
+                                <span>Consult an oral pathologist or oncologist immediately for professional evaluation</span>
+                            </li>
+                            <li>
+                                <i class="fas fa-microscope text-primary"></i>
+                                <span>Consider biopsy for definitive diagnosis and staging</span>
+                            </li>
+                            <li>
+                                <i class="fas fa-notes-medical text-primary"></i>
+                                <span>Document patient history and any symptoms for medical consultation</span>
+                            </li>
+                            {% else %}
+                            <li>
+                                <i class="fas fa-calendar-check text-success"></i>
+                                <span>Schedule regular follow-up screenings every 6-12 months</span>
+                            </li>
+                            <li>
+                                <i class="fas fa-tooth text-success"></i>
+                                <span>Maintain good oral hygiene and attend routine dental checkups</span>
+                            </li>
+                            <li>
+                                <i class="fas fa-ban text-success"></i>
+                                <span>Avoid risk factors like tobacco and excessive alcohol consumption</span>
+                            </li>
+                            {% endif %}
+                        </ul>
                     </div>
                 </div>
 
-                <!-- Action Button -->
-                <div class="text-center mt-4">
-                    <a href="{% url 'reports:generate' detection_results.0.id %}" class="action-btn">
-                        <i class="fas fa-file-pdf me-2"></i>Generate Medical Report
+                <!-- Action Buttons -->
+                <div class="action-buttons">
+                    <a href="{% url 'reports:generate' detection_results.0.id %}" class="action-btn action-btn-primary">
+                        <i class="fas fa-file-pdf me-2"></i>Generate PDF Report
+                    </a>
+                    <button onclick="window.print()" class="action-btn action-btn-secondary">
+                        <i class="fas fa-print me-2"></i>Print
+                    </button>
+                    <a href="{% url 'detection:upload' %}" class="action-btn action-btn-secondary">
+                        <i class="fas fa-plus me-2"></i>New Scan
                     </a>
                 </div>
             </div>
@@ -475,34 +718,32 @@
             </div>
 
             <div class="col-lg-7">
-                <div class="medical-card" style="min-height: 500px;">
+                <div class="medical-card" style="min-height: 450px;">
                     <div class="card-header-custom">
                         <h6 class="card-title">
                             <i class="fas fa-brain me-2"></i>AI Analysis
                         </h6>
                     </div>
-                    <div class="p-5 text-center d-flex align-items-center justify-content-center" style="min-height: 400px;">
+                    <div class="p-4 text-center d-flex align-items-center justify-content-center" style="min-height: 380px;">
                         <div>
                             <div class="mb-4">
-                                <i class="fas fa-robot" style="font-size: 6rem; color: #4A90E2;"></i>
+                                <i class="fas fa-robot" style="font-size: 5rem; color: #4A90E2;"></i>
                             </div>
-                            <h3 class="fw-bold mb-3" style="color: #2C3E50;">Ready for AI Detection</h3>
-                            <p class="text-muted mb-4">Analyze this medical image using advanced deep learning models</p>
+                            <h4 class="fw-bold mb-3" style="color: #2C3E50;">Ready for AI Detection</h4>
+                            <p class="text-muted mb-4">Analyze this image using advanced deep learning models</p>
 
-                            <div class="mb-4">
-                                <div class="d-flex justify-content-center gap-3 mb-3">
-                                    <span class="badge bg-light text-dark px-3 py-2">
-                                        <i class="fas fa-microchip me-2"></i>RegNetY320
-                                    </span>
-                                    <span class="badge bg-light text-dark px-3 py-2">
-                                        <i class="fas fa-microchip me-2"></i>VGG16
-                                    </span>
-                                </div>
+                            <div class="d-flex justify-content-center gap-3 mb-4">
+                                <span class="badge bg-light text-dark px-3 py-2">
+                                    <i class="fas fa-microchip me-2"></i>RegNetY320 (89.4%)
+                                </span>
+                                <span class="badge bg-light text-dark px-3 py-2">
+                                    <i class="fas fa-microchip me-2"></i>VGG16 (73.7%)
+                                </span>
                             </div>
 
-                            <form method="post" action="{% url 'detection:results' image.id %}">
+                            <form method="post" action="{% url 'detection:results' image.id %}" id="detectionForm">
                                 {% csrf_token %}
-                                <button type="submit" name="run_detection" value="1" class="action-btn">
+                                <button type="submit" name="run_detection" value="1" class="action-btn action-btn-primary" onclick="showLoading()">
                                     <i class="fas fa-brain me-2"></i>Run AI Detection
                                 </button>
                             </form>
@@ -517,4 +758,45 @@
         {% endif %}
     </div>
 </div>
+
+<!-- Image Modal -->
+<div class="modal fade" id="imageModal" tabindex="-1">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">{{ image.filename }}</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body text-center p-0">
+                {% if image.file %}
+                <img src="{{ image.file.url }}" alt="{{ image.filename }}" class="image-modal-content img-fluid">
+                {% elif image.file_url %}
+                <img src="{{ image.file_url }}" alt="{{ image.filename }}" class="image-modal-content img-fluid">
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function showLoading() {
+    document.getElementById('loadingOverlay').classList.remove('d-none');
+}
+
+function showImageModal() {
+    new bootstrap.Modal(document.getElementById('imageModal')).show();
+}
+
+// Animate confidence gauge on page load
+document.addEventListener('DOMContentLoaded', function() {
+    const gaugeFill = document.querySelector('.gauge-fill');
+    if (gaugeFill) {
+        setTimeout(() => {
+            gaugeFill.style.transition = 'stroke-dashoffset 1.5s ease';
+        }, 100);
+    }
+});
+</script>
 {% endblock %}

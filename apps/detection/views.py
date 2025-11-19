@@ -18,7 +18,7 @@ def upload(request):
     if request.method == 'POST' and request.FILES.get('image'):
         try:
             uploaded_file = request.FILES['image']
-            
+
             # Validate file size (10MB max)
             if uploaded_file.size > 10485760:
                 return JsonResponse({'error': 'File size exceeds 10MB'}, status=400)
@@ -55,27 +55,64 @@ def upload(request):
                 # Continue with local storage if Supabase fails
                 image.status = 'processed'
                 image.save()
-            
+
             messages.success(request, f'Image "{uploaded_file.name}" uploaded successfully!')
             return JsonResponse({
                 'success': True,
                 'redirect_url': f'/detection/results/{image.id}/'
             })
-            
+
         except Exception as e:
             return JsonResponse({'error': str(e)}, status=500)
-    
-    return render(request, 'detection/upload.html')
+
+    # Get recent uploads for sidebar
+    recent_uploads = Image.objects.filter(user=request.user).order_by('-upload_date')[:5]
+    total_uploads = Image.objects.filter(user=request.user).count()
+
+    context = {
+        'recent_uploads': recent_uploads,
+        'total_uploads': total_uploads,
+    }
+
+    return render(request, 'detection/upload.html', context)
 
 @login_required
 def history(request):
     """Detection history view"""
-    images = Image.objects.filter(user=request.user).order_by('-upload_date')
-    
+    user = request.user
+
+    # Get all images
+    images = Image.objects.filter(user=user).order_by('-upload_date')
+
+    # Get images with their detection results
+    images_with_results = []
+    for image in images:
+        results = DetectionResult.objects.filter(image=image).order_by('-confidence_score')
+        primary_result = results.first()
+        images_with_results.append({
+            'image': image,
+            'primary_result': primary_result,
+            'all_results': results
+        })
+
+    # Statistics
+    total_images = images.count()
+    processed_count = images.filter(status='processed').count()
+    pending_count = images.filter(status='pending').count()
+
+    # Detection statistics
+    cancer_count = DetectionResult.objects.filter(user=user, prediction='Cancer').values('image').distinct().count()
+    non_cancer_count = DetectionResult.objects.filter(user=user, prediction='Non-Cancer').values('image').distinct().count()
+
     context = {
-        'images': images,
+        'images': images_with_results,
+        'total_images': total_images,
+        'processed_count': processed_count,
+        'pending_count': pending_count,
+        'cancer_count': cancer_count,
+        'non_cancer_count': non_cancer_count,
     }
-    
+
     return render(request, 'detection/history.html', context)
 
 @login_required
